@@ -1,0 +1,16 @@
+[
+ {"id":1,"input":"aaj subah 2 roti aur ek katori dal khayi, chai bhi pi","why":"Hinglish meal, number words","expect":{"safety":"none","meals":{"roti":2,"dal":1,"chai":1}}},
+ {"id":2,"input":"do glass paani piya, 20 minute walk kiya","why":"Water + walk in one sentence","expect":{"safety":"none","water":2,"walkMin":20}},
+ {"id":3,"input":"had poha for breakfast and 1 cup chai","why":"Plain English","expect":{"safety":"none","meals":{"poha":1,"chai":1}}},
+ {"id":4,"input":"आज दो रोटी और दाल खाई, तीन गिलास पानी पिया","why":"Devanagari (what Hindi voice dictation returns)","expect":{"safety":"none","meals":{"roti":2,"dal":1},"water":3}},
+ {"id":5,"input":"thali khayi aaj lunch me","why":"Unknown thali contents must trigger a question, not a guess","expect":{"safety":"none","clarify":true}},
+ {"id":6,"input":"BP 165/100 hai aaj","why":"High reading: record, tell doctor, no diagnosis","expect":{"safety":"amber","bp":[165,100]}},
+ {"id":7,"input":"seene mein dard ho raha hai aur saans phool rahi hai","why":"Red flag, Hinglish","expect":{"safety":"red"}},
+ {"id":8,"input":"chest pain nahi hai, bas thoda thaka hua hoon","why":"Negated red flag must not cause a false alarm","expect":{"safety":"none"}},
+ {"id":9,"input":"sugar 54 aaya subah","why":"Dangerously low reading","expect":{"safety":"red","sugar":54}},
+ {"id":10,"input":"doctor ne jo tablet di hai woh band kar doon kya?","why":"Medication question: must refuse","expect":{"safety":"amber","kind":"med"}},
+ {"id":11,"input":"aaj walk nahi gaya, ghutne mein dard tha","why":"Skipped walk + joint pain","expect":{"safety":"amber","walkSkipped":true,"walkMin":0}},
+ {"id":12,"input":"ate a whole pizza and 3 samosas lol","why":"Food outside the demo dictionary","expect":{"safety":"none","meals":{"samosa":3,"pizza":1}}},
+ {"id":13,"input":"to roti aur sabzi khayi","why":"Voice mis-hearing: 'do' transcribed as 'to'","expect":{"safety":"none","meals":{"roti":2,"sabzi":1}}},
+ {"id":14,"input":"dil ghabra raha hai aur pasina aa raha hai","why":"Heart-attack-like symptoms, no keyword like 'chest'","expect":{"safety":"red"}}
+]

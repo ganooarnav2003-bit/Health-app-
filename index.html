@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dinchariya: daily health check-in</title>
+<meta name="description" content="Say your day in Hindi, Hinglish or English. Dinchariya logs it, adapts your walking goal and nudges you gently.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="notice" role="note">Not medical advice. This app does not diagnose or prescribe. For chest pain, trouble breathing or fainting, call <b>112</b>. Demo uses made-up data only.</div>
+
+<main id="app" class="wrap">
+  <!-- Onboarding: the first two minutes -->
+  <section id="onboard" hidden>
+    <h1>Namaste 🙏<br><small>Dinchariya</small></h1>
+    <p class="lead" data-t="onb_lead">Tell me about your day, the way you would tell family. I will keep the notes.</p>
+    <label for="name" data-t="onb_name">Your name (optional)</label>
+    <input id="name" autocomplete="off" maxlength="30">
+    <div class="seg" role="group" aria-label="Language">
+      <button data-lang="hi" class="on">हिंदी / Hinglish</button>
+      <button data-lang="en">English</button>
+    </div>
+    <button id="start" class="big primary" data-t="onb_start">Start</button>
+    <p class="tiny" data-t="onb_priv">Your notes stay on this phone. Nothing to sign up for.</p>
+  </section>
+
+  <!-- Daily screen -->
+  <section id="main" hidden>
+    <header class="top">
+      <div><div id="hello" class="hello"></div><div id="date" class="muted"></div></div>
+      <div class="seg small" role="group" aria-label="Language"><button data-lang="hi">हिं</button><button data-lang="en">EN</button></div>
+    </header>
+
+    <article id="nudge" class="card nudge" aria-live="polite"></article>
+
+    <section class="tiles" aria-label="Today">
+      <div class="tile"><div class="k" data-t="water">Water</div><div class="v" id="t-water"></div><div class="bar"><i id="b-water"></i></div></div>
+      <div class="tile"><div class="k" data-t="walk">Walk</div><div class="v" id="t-walk"></div><div class="bar"><i id="b-walk"></i></div><div class="why" id="walk-why"></div></div>
+      <div class="tile"><div class="k" data-t="food">Food</div><div class="v" id="t-food"></div><div class="why" data-t="rough">rough estimate</div></div>
+    </section>
+
+    <section class="card">
+      <label for="say" id="say-label" data-t="say">What did you eat, drink or do today? Just say it.</label>
+      <div class="chips" id="chips"></div>
+      <textarea id="say" rows="3" placeholder=""></textarea>
+      <div class="row">
+        <button id="mic" class="big" aria-label="Speak">🎤</button>
+        <button id="photo" class="big" aria-label="Photo of plate">📷</button>
+        <button id="send" class="big primary" data-t="send">Log it</button>
+      </div>
+      <input type="file" id="file" accept="image/*" capture="environment" hidden>
+      <div id="reply" class="reply" hidden aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <h2 data-t="today">Today's notes</h2>
+      <ul id="log" class="log"></ul>
+      <p id="empty" class="muted" data-t="empty">Nothing yet.</p>
+    </section>
+
+    <section class="actions">
+      <button id="share" data-t="share">Share today with family (WhatsApp)</button>
+      <button id="sample" class="ghost" data-t="sample">Load sample week (made-up)</button>
+      <button id="reset" class="ghost" data-t="reset">Erase all my notes</button>
+    </section>
+    <p class="tiny"><span id="mode"></span> · <span data-t="water_note">If your doctor has limited your fluids, follow the doctor, not this goal.</span></p>
+  </section>
+</main>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

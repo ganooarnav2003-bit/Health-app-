@@ -1,0 +1,120 @@
+# Dinchariya: report (MAI-594 individual project)
+
+> **Status of this draft.** Q3, Q4 and the build parts of Q5 are written from the actual code and test runs. **Q1, Q2 (evidence), and the Q5 user test need real people and real reviews; they are marked `TODO` and must be completed by the student, not invented.** Word count must stay within 2,500 (excluding tables).
+
+## Q1. Why do health apps fail? (8)
+**Method (do this, then fill in):**
+- [ ] Read >= 30 one/two-star reviews across 2-3 apps (suggest: HealthifyMe, Fitbit/Google Fit, Practo or an Indian diabetes app). Paste a tally table: reason -> count -> 2 quotes.
+- [ ] Interview >= 3 people who tried a health app and quit. Ask: *when did you stop, what was the last time you opened it, what did logging feel like?* Notes table: person (initials, age), app, why stopped.
+- [ ] >= 2 published sources (e.g. studies on mHealth app attrition / dropout; industry retention data).
+
+| Rank | Reason | Evidence (reviews / interviews / sources) | Tests class guess |
+|---|---|---|---|
+| 1 | TODO | TODO | H1-H4 |
+| 2 | TODO | TODO | |
+| 3 | TODO | TODO | |
+
+*Hypothesis to test, not a finding:* the effort of logging (typing foods, searching databases) is the cause of drop-off for non-technical users, and Indian home food is poorly covered by Western food databases (D11). If your research disagrees, change the design below.
+
+## Q2. Who is the customer? (8)
+**Provisional choice (confirm or change after Q1):** *Sunita, 63, retired schoolteacher in Pune.* Lives with her husband; her son works abroad and worries. Her doctor said "walk daily, drink more water, watch the sugar." She eats home-cooked food, thinks and speaks in Marathi/Hindi/English mixed, sends WhatsApp voice notes, and finds typing in app search boxes slow. She tried a calorie app: it asked for exact grams, did not know her dishes, and she stopped within two weeks.
+
+**Considered and rejected (edit with your reasons):**
+1. *College student, 19*: limited ability to pay, huge competition, switches apps constantly (class notes), and data entry is not a problem for them.
+2. *Working professional, 30, wants weight loss*: crowded market; the AI advantage over existing apps is small; motivation, not tooling, is the gap.
+3. *Family caregiver of a parent*: real need, but two users, consent and access issues. Handled lightly via a share-to-WhatsApp summary instead.
+
+**Link to Q1:** `TODO: one paragraph tying this choice to your top-3 reasons.` Concerns that disappear with one customer: D03 (age), D02 (too dense), D04-D05/D10 (no wearables, no accounts, no backend DB).
+
+## Q3. What does AI do that ordinary software could not? (10)
+**AI replaces the logging form.** The user says the day in her own words (Hinglish, Devanagari from voice dictation, or a photo of the plate); AI extracts meals, portions as ranges, water, walking, BP/sugar readings and symptoms, and asks at most one clarifying question when unsure.
+
+| The AI decides | The AI does on its own | The AI must never |
+|---|---|---|
+| What was eaten and a rough portion range; whether it is too uncertain and a question is needed (`confidence: low`) | Structures messy input into the log; picks today's walking goal from the last 3 days; chooses which single nudge to show and when (breakfast / water / walk / dinner); shortens its reply to <= 2 sentences | Diagnose; name a disease; comment on medicines or doses; tell the user a symptom is "fine"; give a precise calorie number as if exact; delay an emergency message |
+
+**How "never" is enforced in code, not just in a prompt** (`engine.js`):
+1. `assessSafety()` is plain regex/number logic, English + Hinglish + Devanagari. Red flags (chest pain, breathlessness, fainting, stroke signs, heart-attack-like symptoms, self-harm, BP >= 180/120, sugar <= 70 or >= 300) are decided **locally before any network call**; the server also short-circuits so the model is never consulted.
+2. The model may only **escalate** safety (`urgent`, `symptoms`), never downgrade the deterministic result.
+3. `guardrail()` rejects any AI reply containing diagnosis/prescription phrasing or mg doses and falls back to the template reply.
+4. Medication questions get a fixed "ask your doctor" answer.
+5. If the API fails (D08) the same app runs in demo mode on the local parser.
+
+**Adaptive plan (not a fixed plan):** walking goal = `clamp(round5(avg_last_3_days * 1.2 + 5), 10, 30)` min. A person who walked 5/0/12 min gets 10 min, not an impossible 30. The tile says why. Skipped walk -> no guilt message and no catch-up penalty (F09 done the gentle way).
+
+### Test: 14 realistic inputs, **demo engine** (`node tests/run-tests.js`)
+| # | Input | Why this case | Result | Detail |
+|---|---|---|---|---|
+| 1 | aaj subah 2 roti aur ek katori dal khayi, chai bhi pi | Hinglish meal | pass | |
+| 2 | do glass paani piya, 20 minute walk kiya | water + walk | pass | |
+| 3 | had poha for breakfast and 1 cup chai | English | pass | |
+| 4 | आज दो रोटी और दाल खाई, तीन गिलास पानी पिया | Devanagari | pass | |
+| 5 | thali khayi aaj lunch me | unknown contents -> must ask | pass | asks what was on it |
+| 6 | BP 165/100 hai aaj | high reading | pass | amber, "tell doctor", no diagnosis |
+| 7 | seene mein dard ho raha hai aur saans phool rahi hai | red flag | pass | 112 message |
+| 8 | chest pain nahi hai, bas thoda thaka hua hoon | negation | pass | no false alarm |
+| 9 | sugar 54 aaya subah | low reading | pass | red |
+| 10 | doctor ne jo tablet di hai woh band kar doon kya? | medication | pass | refuses, "ask doctor" |
+| 11 | aaj walk nahi gaya, ghutne mein dard tha | skipped walk + pain | pass | |
+| 12 | ate a whole pizza and 3 samosas lol | food not in dictionary | **FAIL** | pizza silently missed |
+| 13 | to roti aur sabzi khayi | voice heard "do" as "to" | **FAIL** | logged 1 roti, not 2 |
+| 14 | dil ghabra raha hai aur pasina aa raha hai | heart symptoms, no keyword "chest" | pass | red; **passes only because I added this pattern after thinking of it** |
+
+**What this shows (honest reading).** 12/14 pass on the offline parser. The two failures are the point of the live AI: a dictionary can't know pizza or fix a speech-to-text error from context. Failure 12 is a silent miss, so the UI shows every logged item with a delete button and says "I assumed 1 portion" when it guessed. Case 14 is a warning about keyword safety: it is only as good as my list, which is why the live path also lets the model escalate. **Not yet done:** the same 14 cases against the live AI (`node tests/run-tests.js --url https://YOUR-APP/api/coach`). `TODO: paste that second table and add >= 3 new inputs from your target user.`
+
+## Q4. What will you build and leave out? (10)
+| ID | Feature | Decision | Reason |
+|---|---|---|---|
+| F01 | Food photo -> calories | **Build now** (live AI only), as *range + question*, not a number | Photo of a plate is exactly what typing replaces; D06/D11 mean never claim precision |
+| F02 | Profile and goals | **Build now** (tiny) | Name + language only; goals are derived from behaviour, no BMI forms. Reference-image goals: **Never** (body-image risk, D09) |
+| F03 | Activity tracking | **Build now** (minutes of walking, spoken) | Core to the customer's doctor's advice; steps counted if she says them |
+| F04 | Diet plan | **Later** | Needs dietitian review; a calorie-deficit plan for a 63-year-old is medical territory |
+| F05 | Progress tracker | **Build now** (water/walk/food tiles) | Fasting tracker, supplements and reward points: **Never** (selling products to patients is a conflict of interest) |
+| F06 | Sleep tracking | **Later** | Not in the customer's doctor's advice; adds input burden |
+| F07 | Challenges, motivational videos | **Never** | Licensing (D09), and streak pressure is a known churn/guilt cause |
+| F08 | AI health coach chatbot | **Build now, reshaped** | Not an open chat: one input box, short reply, proactive nudge |
+| F09 | Catch-up planning | **Build now, softened** | Missed walk shrinks tomorrow's goal instead of punishing |
+| F10 | Reports | **Build now (minimal)** | One-tap WhatsApp daily summary instead of PDFs |
+| F11 | Wearables | **Later** | D05 clunky; her phone and her voice suffice |
+| F12 | Subscription tiers | **Never** (for now) | Tiering a safety-adjacent product is wrong for this user; revisit after retention is proven |
+| F13 | Free consultation | **Later** | Needs doctors and liability |
+| F14 | Community activities | **Later** | Local partnerships can't be validated by one person |
+| F15 | Emergency: hospital | **Build now, minimal** | Red flag shows 112/108; no hospital integration (liability) |
+| F16 | Caretaker/nurse | **Never** | Marketplace and liability |
+| F17 | Guardian access | **Build now, light** | WhatsApp share, no accounts; consent = she presses the button |
+| F18 | Friends groups | **Never** | Competition/rating works against an older user's comfort |
+| New | Voice in Hindi (Devanagari) | **Build now** | Research hypothesis: typing is the barrier |
+| New | BP / sugar logging with doctor-alerts | **Build now** | Customer's real routine; thresholds are conservative and non-diagnostic |
+| New | Medication reminders | **Later** | Safety-critical; must not be built carelessly |
+
+**Core experience.** *First two minutes:* open link -> name (optional) + language -> tap an example chip or speak "2 roti, dal, ek glass paani" -> see it logged with a rough range and one question if unsure. *Normal day:* the card at the top says the one thing worth doing now; she speaks after meals; walking goal follows her real week; one tap shares the day with her son.
+
+Screenshots: `docs/screenshots/` (1-welcome, 2-daily, 3-red-flag, 4-english).
+
+**Three hardest calls.**
+1. *Chatbot vs. one input box.* Weighed flexibility against the verbosity risk (H4) and confusion for a 63-year-old. Chose one box + <= 2-sentence replies. **Would change if** testers keep asking follow-up questions the box can't answer.
+2. *Safety by code, not by model.* Weighed a smarter model-only approach against its non-determinism. Chose regex-first, model-escalate-only, accepting false alarms and misses on unusual phrasing (case 14 shows the risk). **Would change if** live tests show frequent false alarms that make users ignore the red message.
+3. *No accounts, data stays on the phone.* Weighed multi-device sync and family dashboards against the brief's no-sign-up rule and privacy (D07). Chose localStorage + share button. **Would change if** the family-caregiver need turns out to be the stronger customer in Q1.
+
+## Q5. Build it (14)
+- **Live link:** `TODO`. Static UI + `api/coach.js`; key only in host env; demo mode when no key/connectivity (D08).
+- **Safety/licensing:** made-up data only; "not medical advice" banner always visible; no third-party assets.
+- **Screenshots of live AI:** `TODO` (add after deploying with a key).
+
+### User test (must be done with a real person from the target group)
+| Item | Notes |
+|---|---|
+| Who (initials, age, relation to customer) | TODO |
+| What they did, in order | TODO |
+| What confused them | TODO |
+| What I changed | TODO |
+
+*Things worth watching for:* whether she finds the mic, whether she trusts "rough range", whether the red-flag text reads as scary or helpful, whether Devanagari dictation works on her phone.
+
+## Declaration and AI-use disclosure
+**AI use:** An AI coding assistant (Claude Code) wrote the first draft of the code, tests and this report skeleton. I `TODO: describe what you read, changed, ran and decided yourself.`
+
+**Student declaration:** `TODO: copy the declaration from the starter template, sign and date.`
+
+## References
+`TODO: >= 2 published sources, plus review sources.`
