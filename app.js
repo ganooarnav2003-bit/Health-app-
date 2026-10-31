@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const E = window.HealthEngine, TP = window.HealthTips, W = window.HealthWalk, PL = window.HealthPlans, WT = window.HealthWatch, F = window.HealthFit;
+  const E = window.HealthEngine, TP = window.HealthTips, W = window.HealthWalk, PL = window.HealthPlans, WT = window.HealthWatch, F = window.HealthFit, CM = window.HealthCommunity;
   const KEY = 'dinchariya.v1'; // storage key kept from the first version so saved notes survive the rename
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
@@ -13,10 +13,10 @@
   let st = load();
 
   function load() {
-    try { const s = JSON.parse(localStorage.getItem(KEY)) || {}; return { profile: s.profile || null, entries: s.entries || [], chat: s.chat || [], plan: s.plan || null, redeemed: s.redeemed || [], ai: s.ai || null }; }
+    try { const s = JSON.parse(localStorage.getItem(KEY)) || {}; return { profile: s.profile || null, entries: s.entries || [], chat: s.chat || [], plan: s.plan || null, redeemed: s.redeemed || [], ai: s.ai || null, friends: s.friends || [], groups: s.groups || [], challenge: s.challenge || null, challengeLog: s.challengeLog || [] }; }
     catch (e) { return blank(); }
   }
-  function blank() { return { profile: null, entries: [], chat: [], plan: null, redeemed: [], ai: null }; }
+  function blank() { return { profile: null, entries: [], chat: [], plan: null, redeemed: [], ai: null, friends: [], groups: [], challenge: null, challengeLog: [] }; }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
   const dayKeyOffset = (off) => { const d = new Date(); d.setDate(d.getDate() + off); return E.dayKey(d); };
   const todayKey = () => E.dayKey(new Date());
@@ -141,6 +141,7 @@
 
     renderRewardTile();
     renderSnapshot();
+    renderCommunityTile();
     const tip = TP.pickDaily(todayKey(), sum, g)[0];
     $('#teaser').innerHTML = '<span class="kick">Today\'s health digest</span><b></b><span></span>';
     $('#teaser').querySelector('b').textContent = tip.title; $('#teaser span:last-child').textContent = tip.body.length > 110 ? tip.body.slice(0, 108).replace(/\s+\S*$/, '') + '… Read more' : tip.body;
@@ -284,6 +285,8 @@
     if (view === 'track') renderBody();
     if (view === 'walk') { renderWalk(); renderHr(); }
     if (view === 'me') renderEmergency();
+    if (view === 'community') renderCommunity();
+    checkChallenge();
     if (view === 'rewards') renderRewards();
     if (view === 'plans') renderPlans();
     renderPro(); updateChatMeta();
@@ -612,7 +615,7 @@
   $('#chat-close').onclick = () => closeChat();
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if ($('#drawer').classList.contains('open')) closeDrawer(); else closeChat(); } });
 
-  $('#start').onclick = () => { st.profile = { name: $('#name').value.trim() }; save(); go('home'); };
+  $('#start').onclick = () => { st.profile = { name: $('#name').value.trim() }; save(); go('home'); if (pendingFriend || pendingErr) go('community'); };
   $('#send').onclick = () => submit($('#say').value);
   $('#say').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit($('#say').value); });
 
@@ -833,7 +836,7 @@
     a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
   function backupDownload() {
-    const payload = { app: 'my-fitness-buddy', version: 1, exportedTs: Date.now(), data: { profile: st.profile, entries: st.entries, chat: st.chat, plan: st.plan, redeemed: st.redeemed, ai: st.ai } };
+    const payload = { app: 'my-fitness-buddy', version: 1, exportedTs: Date.now(), data: { profile: st.profile, entries: st.entries, chat: st.chat, plan: st.plan, redeemed: st.redeemed, ai: st.ai, friends: st.friends, groups: st.groups, challenge: st.challenge, challengeLog: st.challengeLog } };
     download(`my-fitness-buddy-backup-${todayKey()}.json`, 'application/json', JSON.stringify(payload));
     $('#bk-msg').textContent = 'Backup downloaded. Keep the file private.';
   }
@@ -854,7 +857,7 @@
     const rd = new FileReader();
     rd.onerror = () => { msg.textContent = 'That file could not be read.'; };
     rd.onload = () => {
-      const r = F.sanitizeBackup(String(rd.result), PL.PLANS.map((p) => p.id));
+      const r = F.sanitizeBackup(String(rd.result), PL.PLANS.map((p) => p.id), CM.CHALLENGES.map((c) => c.id));
       if (!r.ok) { msg.textContent = r.error; return; }
       if (!confirm(`Replace everything on this phone with this backup (${r.state.entries.length} notes)? This cannot be undone.`)) { msg.textContent = 'Restore cancelled. Nothing was changed.'; return; }
       st = r.state; save(); render(); fillProfileForm(); fillEmergency();
@@ -874,6 +877,154 @@
   $('#bk-restore').onclick = () => $('#bk-file').click();
   $('#bk-file').onchange = (ev) => { backupRestore(ev.target.files[0]); ev.target.value = ''; };
   setInterval(() => { if (view === 'walk') renderHr(); }, 5000); // greys out the number if readings stop
+
+
+  // ================= community (no server, no strangers) =================
+  let pendingFriend = null, pendingErr = '';
+  const days7 = () => weekKeys().map((k) => sumOn(k).steps);
+  function myWeek() { const d = days7(); return { week: Math.min(280000, d.reduce((a, b) => a + b, 0)), best: Math.min(40000, Math.max(0, ...d)), streak: Math.min(400, rewards().streak) }; }
+  function boardRows() {
+    const me = myWeek(), rows = [{ id: 'me', name: (st.profile && st.profile.name) || 'You', week: me.week, best: me.best, streak: me.streak, ts: Date.now(), you: true }];
+    st.friends.forEach((f) => rows.push({ ...f }));
+    return CM.rank(rows);
+  }
+  function myLink() { return location.href.split('#')[0] + '#buddy=' + CM.encodeShare({ name: (st.profile && st.profile.name) || 'Friend', ...myWeek(), ts: Date.now() }); }
+  function openWhatsApp(text) { window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener'); }
+  function shareWeek() {
+    const w = myWeek();
+    if (!confirm(`This shares only your first name, your steps this week (${fmt(w.week)}), your best day (${fmt(w.best)}) and your streak (${w.streak}). No health readings, no location. Continue?`)) return;
+    const url = myLink(), text = `Join my walking board on My Fitness Buddy! I did ${fmt(w.week)} steps this week. Open this link to add me:`;
+    if (navigator.share) navigator.share({ title: 'My Fitness Buddy', text, url }).catch(() => {}); else openWhatsApp(text + ' ' + url);
+    $('#cm-msg').textContent = 'Shared. Ask your friends to share theirs back.';
+  }
+  async function copyLink() {
+    const url = myLink(), msg = $('#cm-msg');
+    try { await navigator.clipboard.writeText(url); msg.textContent = 'Link copied. Paste it in a message to a friend.'; toast('Link copied'); }
+    catch (e) { const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); msg.textContent = 'Link copied.'; } catch (e2) { msg.textContent = 'Could not copy automatically. Long-press to copy: ' + url; } t.remove(); }
+  }
+  function takeIncoming() {
+    const m = /^#buddy=([A-Za-z0-9_-]*)$/.exec(location.hash || '');
+    if (!m) return false;
+    const r = CM.decodeShare(m[1]);
+    window.history.replaceState(null, '', location.pathname + location.search); // (window.history: this file has its own history() helper) never leave the data in the address bar
+    if (r.ok) { pendingFriend = r.friend; pendingErr = ''; } else { pendingFriend = null; pendingErr = r.error; }
+    return true;
+  }
+  function addPendingFriend() {
+    const f = pendingFriend; if (!f) return;
+    const i = st.friends.findIndex((x) => x.name.toLowerCase() === f.name.toLowerCase() && !x.sample);
+    if (i >= 0) st.friends[i] = { ...st.friends[i], ...f };
+    else if (st.friends.length >= CM.LIMITS.friendsMax) { $('#cm-msg').textContent = 'Your board is full (30 friends). Remove someone first.'; return; }
+    else st.friends.push({ id: newId(), ...f });
+    pendingFriend = null; save(); toast(`${f.name} added`); render();
+  }
+
+  // challenges are judged only from your own data
+  const dayStats = (k) => { const s = sumOn(k); return { steps: s.steps, water: s.water, active: activeMinOn(k) }; };
+  const chalDef = (id) => CM.CHALLENGES.find((c) => c.id === id);
+  function checkChallenge() {
+    if (!st.challenge) return;
+    const d = chalDef(st.challenge.id); if (!d) { st.challenge = null; save(); return; }
+    const p = CM.challengeProgress(d, st.challenge.startKey, todayKey(), dayStats);
+    if (p.complete) { st.challengeLog.push({ id: d.id, doneKey: todayKey() }); st.challengeLog = st.challengeLog.slice(-50); st.challenge = null; save(); toast(`🎉 Challenge complete: ${d.label}`, 4500); }
+  }
+  function startChallenge(id) { st.challenge = { id, startKey: todayKey() }; save(); toast('Challenge started. Good luck!'); render(); }
+
+  function renderCommunityTile() {
+    const el = $('#communitycard'), rows = boardRows(), me = rows.find((r) => r.you), d = st.challenge && chalDef(st.challenge.id);
+    el.innerHTML = '<b></b><span></span>'; el.querySelector('b').textContent = '👥 Community';
+    el.querySelector('span').textContent = st.friends.length ? `You are #${me.rank} of ${rows.length} on your friends board this week.` : d ? `Challenge on: ${d.label}.` : 'Invite a friend or start a 7-day challenge.';
+  }
+  function groupInvite(g) { return `You are invited: ${g.name} (${g.kind}). ${g.when ? 'When: ' + g.when + '. ' : ''}${g.where ? 'Where: ' + g.where + '. ' : ''}Shared from My Fitness Buddy. This is not medical advice: go at your own comfortable pace.`; }
+
+  function renderCommunity() {
+    // pending friend (from a link)
+    const pc = $('#pendingcard');
+    if (pendingFriend) {
+      pc.hidden = false; const f = pendingFriend;
+      $('#pc-title').textContent = `${f.name} shared their week with you`;
+      $('#pc-text').textContent = `${fmt(f.week)} steps this week · best day ${fmt(f.best)} · ${f.streak}-day streak (shared ${CM.timeAgo(f.ts)}).`;
+    } else if (pendingErr) { pc.hidden = false; $('#pc-title').textContent = 'That link could not be used'; $('#pc-text').textContent = pendingErr; $('#pc-add').hidden = true; }
+    else pc.hidden = true;
+    if (pendingFriend) $('#pc-add').hidden = false;
+
+    // board
+    const rows = boardRows(), ol = $('#board'); ol.innerHTML = '';
+    $('#board-empty').hidden = st.friends.length > 0;
+    if (st.friends.length) rows.forEach((r) => {
+      const li = document.createElement('li'); if (r.you) li.className = 'you';
+      li.innerHTML = '<div class="rk"></div><div class="nm"><span class="n"></span><span class="sub"></span></div><div class="wk"></div><div class="acts"></div>';
+      li.querySelector('.rk').textContent = r.rank;
+      const nm = li.querySelector('.n'); nm.textContent = r.name + (r.you ? ' (you)' : '');
+      if (r.sample) { const t = document.createElement('span'); t.className = 'stag'; t.textContent = 'sample'; nm.after(t); }
+      li.querySelector('.sub').textContent = r.you ? `best day ${fmt(r.best)} · ${r.streak}-day streak` : `best day ${fmt(r.best)} · ${r.streak}-day streak · shared ${CM.timeAgo(r.ts)}`;
+      li.querySelector('.wk').textContent = fmt(r.week);
+      if (!r.you) {
+        const a = li.querySelector('.acts');
+        const cheer = document.createElement('button'); cheer.type = 'button'; cheer.textContent = '👏 Cheer'; cheer.setAttribute('aria-label', 'Cheer ' + r.name);
+        cheer.onclick = () => openWhatsApp(`Well done, ${r.name}! ${fmt(r.week)} steps this week is great. 👏 (My Fitness Buddy)`);
+        const rm = document.createElement('button'); rm.type = 'button'; rm.textContent = '✕ Remove'; rm.setAttribute('aria-label', 'Remove ' + r.name);
+        rm.onclick = () => { if (confirm(`Remove ${r.name} from your board?`)) { st.friends = st.friends.filter((x) => x.id !== r.id); save(); render(); } };
+        a.append(cheer, rm);
+      }
+      ol.appendChild(li);
+    });
+
+    // challenges
+    const act = $('#ch-active'); act.innerHTML = '';
+    if (st.challenge) {
+      const d = chalDef(st.challenge.id), p = CM.challengeProgress(d, st.challenge.startKey, todayKey(), dayStats);
+      const box = document.createElement('div'); box.className = 'chal on'; box.innerHTML = '<b></b><div class="dots"></div><div class="bar"><i></i></div><span class="why"></span><div class="row"><button type="button" class="ghost">Invite a friend</button><button type="button" class="ghost">Stop</button></div>';
+      box.querySelector('b').textContent = d.label; box.querySelector('i').style.width = Math.round(p.pct * 100) + '%';
+      const dots = box.querySelector('.dots'); for (let i = 0; i < d.window; i++) { const x = document.createElement('i'); if (i < p.perDay.length) x.className = p.perDay[i] ? 'hit' : (i === p.perDay.length - 1 ? '' : 'miss'); dots.appendChild(x); }
+      box.querySelector('.why').textContent = p.expired ? 'This one can no longer be completed. You can start it again from today.' : d.mode === 'days' ? `${p.hits} of ${d.need} days done · ${p.daysLeft} days left after today` : `${fmt(p.progress)} of ${fmt(d.need)} minutes · ${p.daysLeft} days left after today`;
+      const [inv, stop] = box.querySelectorAll('button');
+      inv.onclick = () => openWhatsApp(`Let's do this together: ${d.label}. Starting today! (My Fitness Buddy)`);
+      stop.textContent = p.expired ? 'Clear' : 'Stop'; stop.onclick = () => { st.challenge = null; save(); render(); };
+      act.appendChild(box);
+    }
+    const list = $('#ch-list'); list.innerHTML = '';
+    if (!st.challenge) CM.CHALLENGES.forEach((d) => {
+      const row = document.createElement('div'); row.className = 'redeem'; row.innerHTML = '<div><b></b><small>Starts today. Judged from your own steps, water and active minutes.</small></div><button type="button">Start</button>';
+      row.querySelector('b').textContent = d.label; row.querySelector('button').onclick = () => startChallenge(d.id); list.appendChild(row);
+    });
+    const log = $('#ch-log'); log.innerHTML = '';
+    st.challengeLog.slice().reverse().slice(0, 5).forEach((c) => { const d = chalDef(c.id); if (!d) return; const li = document.createElement('li'); li.innerHTML = '<div><div class="t"></div><div class="b"></div></div>'; li.querySelector('.t').textContent = 'Completed ' + c.doneKey; li.querySelector('.b').textContent = '🏅 ' + d.label; log.appendChild(li); });
+
+    // groups
+    const gl = $('#grouplist'); gl.innerHTML = ''; $('#g-empty').hidden = st.groups.length > 0;
+    st.groups.forEach((g) => {
+      const li = document.createElement('li'), d = document.createElement('div'); d.innerHTML = '<div class="t"></div><div class="b"></div>';
+      d.querySelector('.t').textContent = g.kind + (g.sample ? ' · sample' : '');
+      d.querySelector('.b').textContent = [g.name, g.when, g.where].filter(Boolean).join(' · ');
+      const box = document.createElement('div'); box.className = 'rowbtns';
+      const sh = document.createElement('button'); sh.type = 'button'; sh.textContent = '📤'; sh.setAttribute('aria-label', 'Send an invite for ' + g.name); sh.onclick = () => openWhatsApp(groupInvite(g));
+      const rm = document.createElement('button'); rm.type = 'button'; rm.textContent = '🗑'; rm.setAttribute('aria-label', 'Delete ' + g.name);
+      rm.onclick = () => { if (confirm(`Delete the group "${g.name}"?`)) { st.groups = st.groups.filter((x) => x.id !== g.id); save(); render(); } };
+      box.append(sh, rm); li.append(d, box); gl.appendChild(li);
+    });
+    const hasSample = st.friends.some((f) => f.sample) || st.groups.some((g) => g.sample);
+    $('#cm-sample').textContent = hasSample ? 'Remove the sample community' : 'Load sample community (made-up)';
+  }
+  function addGroup() {
+    const msg = $('#g-msg'), name = CM.cleanName($('#g-name').value).slice(0, 40);
+    if (!name) { msg.textContent = 'Please give your group a name.'; return; }
+    if (st.groups.length >= CM.LIMITS.groupsMax) { msg.textContent = 'You have 20 groups already. Delete one first.'; return; }
+    const clean = (v, n) => String(v || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
+    st.groups.push({ id: newId(), name, kind: $('#g-kind').value, when: clean($('#g-when').value, 40), where: clean($('#g-where').value, 60), sample: false });
+    ['#g-name', '#g-when', '#g-where'].forEach((x) => { $(x).value = ''; }); msg.textContent = `Added "${name}". Tap 📤 to send an invite.`; save(); render();
+  }
+  function toggleSampleCommunity() {
+    if (st.friends.some((f) => f.sample) || st.groups.some((g) => g.sample)) { st.friends = st.friends.filter((f) => !f.sample); st.groups = st.groups.filter((g) => !g.sample); save(); render(); toast('Sample community removed'); return; }
+    const now = Date.now(), D = 86400000;
+    [['Asha', 61200, 12400, 5, 0], ['Ravi', 48700, 10100, 3, 1], ['Meena', 35100, 8200, 0, 2], ['Prakash', 22400, 6100, 0, 4]].forEach(([n, w, b, s, ago], i) => st.friends.push({ id: 'sf' + i, name: n, week: w, best: b, streak: s, ts: now - ago * D, sample: true }));
+    st.groups.push({ id: 'sg1', name: 'Morning walk group', kind: 'Walking', when: 'Mon-Sat, 6:30 am', where: 'Neighbourhood park (made-up)', sample: true }, { id: 'sg2', name: 'Chair yoga', kind: 'Yoga', when: 'Wed and Sat, 5 pm', where: 'Community hall (made-up)', sample: true });
+    save(); render(); toast('Sample community loaded');
+  }
+  CM.GROUP_KINDS.forEach((k) => { const o = document.createElement('option'); o.value = k; o.textContent = k; $('#g-kind').appendChild(o); });
+  $('#cm-share').onclick = shareWeek; $('#cm-copy').onclick = copyLink; $('#cm-sample').onclick = toggleSampleCommunity; $('#g-add').onclick = addGroup;
+  $('#pc-add').onclick = addPendingFriend; $('#pc-no').onclick = () => { pendingFriend = null; pendingErr = ''; render(); };
+  window.addEventListener('hashchange', () => { if (takeIncoming() && st.profile) go('community'); });
 
   // ---------------- refresh ----------------
   // Re-reads the clock, re-checks whether live AI is reachable, and redraws every screen.
@@ -898,6 +1049,8 @@
 
   // ---------------- boot ----------------
   fetch('api/coach').then((r) => (r.ok ? r.json() : { live: false })).then((j) => { live = !!j.live; render(); }).catch(() => render());
+  takeIncoming();
   go('home');
+  if (st.profile && (pendingFriend || pendingErr)) go('community');
   setInterval(() => st.profile && render(), 5 * 60 * 1000); // keeps nudges and the date fresh
 })();

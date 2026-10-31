@@ -16,10 +16,11 @@ Say your day in plain English ("2 roti, dal, 1 glass water, 15 min walk"). The A
 | `vendor/leaflet/` | Leaflet 1.9.4 (BSD-2-Clause), bundled so the map works without a CDN |
 | `watch.js` | Bluetooth heart-rate parsing, zones (Tanaka max HR), advice, demo stream |
 | `fit.js` | Workouts (MET calories), sleep, weight stats, CSV, and the strict backup-import validator |
+| `community.js` | Community without a server: friend-link encode/decode with strict validation, ranking, challenge rules |
 | `tips.js` | Curated Daily Health Digest (31 general tips, picked per day and per user's gaps) |
 | `api/ask.js` | Question-answering agent: Claude with 3 tools that read a snapshot of the user's day; red flags and medicine questions never reach the model |
 | `api/coach.js` | Vercel function calling the Claude API. Key is read from env, never stored in the repo |
-| `tests/` | 20 realistic inputs; `node tests/run-ask.js` tests the question agent; `node tests/run-profile.js` tests protein/calorie maths and the tips library; `node tests/run-walk-plans.js` tests GPS maths, plans and rewards; `node tests/run-fit.js` tests heart-rate parsing, workouts, sleep, weight and hostile backup files; `node tests/run-tests.js` (demo) or `--url <live>/api/coach` (live AI) |
+| `tests/` | 20 realistic inputs; `node tests/run-ask.js` tests the question agent; `node tests/run-profile.js` tests protein/calorie maths and the tips library; `node tests/run-walk-plans.js` tests GPS maths, plans and rewards; `node tests/run-fit.js` tests heart-rate parsing, workouts, sleep, weight and hostile backup files; `node tests/run-community.js` tests friend links (including hostile ones), ranking and challenges; `node tests/run-tests.js` (demo) or `--url <live>/api/coach` (live AI) |
 | `REPORT.md` | Answers to Q1-Q5 |
 
 ## Run locally
@@ -49,3 +50,10 @@ Heart-rate zones are a general guide, not medical advice. The app never diagnose
 
 ## Your data
 Everything is stored on the phone only. Use *Me > Backup & restore* to download a copy (and to move to a new phone) or export a daily CSV for your doctor. Restoring a backup validates every field and replaces what is on the phone after you confirm.
+
+## Community (no server, no strangers)
+There are **no public posts and no stranger accounts**. *Community* has three parts, all stored on the phone:
+- **Friends board:** *Share my week* makes a link containing only your first name, steps this week, best day and streak. A friend opens it and chooses to add you. Nothing is stored on a server, so numbers update only when someone shares a new link, and they are not verified. Only add people you know.
+- **Challenges:** four short challenges judged from your own steps, water and active minutes.
+- **My groups:** keep your own walking group or yoga class and send an invite in one tap.
+*Load sample community* shows made-up friends so you can see how it looks. A real, live community (chat, public groups, live leaderboards) would need accounts, a database and moderation, which this prototype deliberately does not have.

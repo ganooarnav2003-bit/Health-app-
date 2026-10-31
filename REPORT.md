@@ -93,13 +93,13 @@ The class guess that apps are "too complex" (H1) is partly supported (too many s
 | F11 | Wearables | **Build now, limited** | Bluetooth heart-rate straps and some watches in Chrome on Android only; Apple Watch and Fitbit are **not** supported |
 | F12 | Subscription tiers | **Build now as a demo** | Free plan plus Monthly Rs 599, 6 months Rs 1,299, Yearly Rs 7,999; **no payment is taken**; safety features stay free |
 | F13 | Free consultation | **Later** | Needs doctors and liability |
-| F14 | Community activities | **Later** | A single student cannot validate local partnerships |
+| F14 | Community activities | **Build now, light** | "My groups": she adds her own walking group or yoga class and sends an invite in one tap; no listings of real events, because one student cannot verify local partnerships |
 | F15 | Emergency: hospital | **Build now, minimal** | One-tap call to 112 and her own emergency contact; no hospital integration |
 | F16 | Caretaker or nurse | **Never** | A marketplace with liability |
 | F17 | Guardian access | **Build now, light** | WhatsApp share; she decides when; no accounts |
-| F18 | Friends groups | **Never** | Competition works against this user |
+| F18 | Friends groups | **Build now, opt-in and server-free** | A friends board built from share links (first name and weekly steps only), plus personal challenges. No public posts, no strangers, no ratings or comments; ranking is shown gently and numbers are unverified. This reverses my earlier "Never" after weighing that older adults often walk with friends |
 
-**New features from my reasoning:** water tracker, calories and protein with per-item removal, workouts with weekly active minutes, weight trend, backup and restore (there is no server), daily health digest, 10,000-step rewards, daily-limit free plan.
+**New features from my reasoning:** community (friends board, challenges, groups), water tracker, calories and protein with per-item removal, workouts with weekly active minutes, weight trend, backup and restore (there is no server), daily health digest, 10,000-step rewards, daily-limit free plan.
 
 **Core experience (screenshots in `docs/screenshots/`).**
 - *First two minutes:* open the link, type a name (optional), tap "Start (no sign-up)", say "2 roti, dal, one glass of water", and see it logged with a rough range and one question if unsure. ![welcome](docs/screenshots/1-welcome.png) ![home](docs/screenshots/2-daily.png)
@@ -107,7 +107,7 @@ The class guess that apps are "too complex" (H1) is partly supported (too many s
 
 **My three hardest calls**
 1. **Safety by code, not by model.** *Weighed:* a smarter model-only approach against its unpredictability. *Chose:* rules first, model may only escalate. *Cost:* some false alarms and unusual phrasings missed (case 14). *Would change my mind if* live testing shows frequent false alarms that make her ignore warnings.
-2. **Breadth versus focus.** The brief says a small, well-argued app beats a large one, and this one *grew*: watch connection, rewards, subscription, sleep and weight were added after the core was working. *Chose:* keep them but built on shared, tested modules, each clearly labelled and optional. *Would change my mind if* Sunita is confused by the extra screens; I would then hide everything except Home, Track and the assistant. **If you are graded on focus, this is the call to reconsider.**
+2. **Breadth versus focus.** The brief says a small, well-argued app beats a large one, and this one *grew*: watch connection, rewards, subscription, community, sleep and weight were added after the core was working. *Chose:* keep them but built on shared, tested modules, each clearly labelled and optional. *Would change my mind if* Sunita is confused by the extra screens; I would then hide everything except Home, Track and the assistant. **If you are graded on focus, this is the call to reconsider.**
 3. **No login, no server, no real payments.** *Weighed:* accounts and sync against the brief's "no sign-up" and the privacy of health data (D07). *Chose:* data on the phone, optional backup file, demo-only subscription. *Known flaw:* the prices as given make **Yearly Rs 667 a month, dearer than Monthly (Rs 599) and 6 months (Rs 217)**; I left them as specified but the app does not call yearly "best value". *Would change my mind if* testers lose data or ask for a family view.
 
 ## Q5. Build it

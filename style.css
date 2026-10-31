@@ -249,3 +249,23 @@ select{width:100%;font:inherit;padding:12px;border:2px solid var(--line);border-
 .wtchart svg{width:100%;height:auto;display:block}
 .wtchart .empty{color:var(--mut);padding:18px 4px;font-size:.95rem}
 .chart .barv.sleep{background:#4cc9f0}.chart .col.today .barv.sleep{background:#7fe0ff}
+
+/* ================= Community ================= */
+.commnote{display:flex;flex-direction:column;gap:4px;border-color:#1f7a45;background:#0b1f14}.commnote span{color:var(--mut);font-size:.95rem}
+.pending{border-color:var(--pri);background:#0b2415}.pending b{font-size:1.1rem}
+.board{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}
+.board li{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:10px;background:var(--tile);border:2px solid transparent;border-radius:14px;padding:8px 10px}
+.board li.you{border-color:var(--pri);background:#0b2415}
+.board .rk{width:40px;height:40px;border-radius:50%;background:#26382d;display:flex;align-items:center;justify-content:center;font-weight:800}
+.board li:first-child .rk{background:#e0a93b;color:#1b1200}
+.board .nm{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .sub{display:block;font-weight:400;color:var(--mut);font-size:.8rem;white-space:normal}
+.board .wk{font-weight:800;font-size:1.1rem;text-align:right;font-variant-numeric:tabular-nums}
+.board .acts{grid-column:2 / 4;display:flex;gap:6px;justify-content:flex-end}
+.board .acts button{min-height:44px;padding:0 12px;font-size:.85rem}
+.stag{display:inline-block;background:#26382d;color:var(--mut);border-radius:99px;padding:0 8px;font-size:.8rem;margin-left:6px;font-weight:600}
+.chal{border:2px solid var(--line);border-radius:14px;padding:10px 12px;margin:8px 0}
+.chal.on{border-color:var(--pri);background:#0b2415}.chal b{display:block}
+.chal .dots{display:flex;gap:6px;margin:8px 0}.chal .dots i{width:22px;height:22px;border-radius:50%;background:#26382d}.chal .dots i.hit{background:var(--pri)}.chal .dots i.miss{background:#5a2a2a}
+.communitytile{display:block;width:100%;text-align:left;font-weight:400;border-color:#1f7a45}
+.communitytile b{display:block;font-size:1.05rem;margin-bottom:2px}.communitytile span{color:var(--mut);font-size:.9rem}

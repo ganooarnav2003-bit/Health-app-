@@ -32,6 +32,7 @@
     <li><button id="d-refresh" type="button">🔄 Refresh</button></li>
     <li><button data-go="walk">🗺 Walk map</button></li>
     <li><button data-go="rewards">🏆 Rewards · 10,000 steps</button></li>
+    <li><button data-go="community">👥 Community</button></li>
     <li><button data-go="plans">⭐ Plans &amp; Premium <span class="tag" id="d-plan-tag">Free</span></button></li>
     <li class="sep"></li>
     <li><button data-go="track" data-scroll="logcard">🍽 Log food</button></li>
@@ -117,6 +118,8 @@
       </section>
 
       <button class="card rewardtile" id="rewardcard" data-go="rewards" type="button"></button>
+
+      <button class="card communitytile" id="communitycard" data-go="community" type="button"></button>
 
       <section class="card" aria-labelledby="h-week">
         <div class="thead"><h2 id="h-week">This week</h2><div class="streak" id="streak"></div></div>
@@ -322,6 +325,62 @@
       <p class="why" id="plan-note">Demo only: no payment is taken and nothing is charged. Choosing a plan switches Premium on for this phone. A real launch would need a payment provider such as Razorpay, plus checking taxes and refund rules.</p>
     </section>
 
+    <!-- COMMUNITY -->
+    <section id="v-community" class="view" data-view="community" hidden>
+      <h1 class="vtitle">Community</h1>
+      <section class="card commnote">
+        <b>Walk together, privately.</b>
+        <span>No public posts and no strangers: you choose who sees your steps. For medical questions ask your doctor, not a group. In an emergency call 112.</span>
+      </section>
+
+      <section id="pendingcard" class="card pending" hidden aria-live="polite">
+        <b id="pc-title"></b>
+        <p id="pc-text" class="muted"></p>
+        <div class="row"><button id="pc-add" class="primary big" type="button">Add to my board</button><button id="pc-no" class="big" type="button">Not now</button></div>
+        <p class="why">Only add people you know. A link can be edited by anyone, so these numbers are not verified.</p>
+      </section>
+
+      <section class="card" id="boardcard" aria-labelledby="h-board">
+        <div class="thead"><h2 id="h-board">🏅 Friends board</h2><span class="muted">steps this week</span></div>
+        <ol id="board" class="board"></ol>
+        <p id="board-empty" class="muted">No friends yet. Share your week, and ask a friend to share theirs. Or load the sample community below to see how it looks.</p>
+        <div class="actions">
+          <button id="cm-share" class="primary big" type="button">Share my week with friends</button>
+          <button id="cm-copy" type="button">Copy my link</button>
+        </div>
+        <p class="why" id="cm-msg" aria-live="polite"></p>
+        <p class="why">The link contains only your first name, your steps this week, your best day and your streak. Nothing is stored on a server, so your friends' numbers update only when they share a new link.</p>
+      </section>
+
+      <section class="card" id="challengecard" aria-labelledby="h-ch">
+        <h2 id="h-ch">🎯 Challenges</h2>
+        <div id="ch-active"></div>
+        <div id="ch-list"></div>
+        <ul id="ch-log" class="log"></ul>
+      </section>
+
+      <section class="card" id="groupscard" aria-labelledby="h-gr">
+        <h2 id="h-gr">👥 My groups</h2>
+        <p class="muted">Keep your walking group, yoga class or laughter club in one place, and send an invite in one tap.</p>
+        <ul id="grouplist" class="log"></ul>
+        <p id="g-empty" class="muted">No groups yet. Add one below.</p>
+        <div class="grid2">
+          <div><label for="g-name">Group name</label><input id="g-name" maxlength="40" autocomplete="off" placeholder="e.g. Park walkers"></div>
+          <div><label for="g-kind">Kind</label><select id="g-kind"></select></div>
+          <div><label for="g-when">When</label><input id="g-when" maxlength="40" autocomplete="off" placeholder="Mon-Sat, 6:30 am"></div>
+          <div><label for="g-where">Where</label><input id="g-where" maxlength="60" autocomplete="off" placeholder="Society garden"></div>
+        </div>
+        <button id="g-add" class="primary big full" type="button">Add group</button>
+        <p class="why" id="g-msg" aria-live="polite"></p>
+      </section>
+
+      <section class="card">
+        <h2>Try it with sample friends</h2>
+        <p class="muted">Loads made-up friends and groups so you can see the board. They are clearly marked "sample" and can be removed.</p>
+        <button id="cm-sample" class="ghost full" type="button">Load sample community (made-up)</button>
+      </section>
+    </section>
+
     <!-- DAILY DIGEST -->
     <section id="v-tips" class="view" data-view="tips" hidden>
       <h1 class="vtitle">Daily health digest</h1>
@@ -436,6 +495,7 @@
 <script src="plans.js"></script>
 <script src="watch.js"></script>
 <script src="fit.js"></script>
+<script src="community.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

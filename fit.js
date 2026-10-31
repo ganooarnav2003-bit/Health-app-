@@ -94,13 +94,32 @@
   const isPhone = (s) => /^\+?[0-9][0-9 ()-]{5,17}$/.test(String(s || '').trim());
   const telHref = (s) => 'tel:' + String(s).replace(/[^0-9+]/g, '');
 
-  // Returns { ok:true, state } or { ok:false, error }. planIds: allowed plan ids.
-  function sanitizeBackup(raw, planIds) {
+  const cleanLabel = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n).trim();
+  const KINDS = ['Walking', 'Yoga', 'Cycling', 'Laughter club', 'Other'];
+  const dateKey = (k) => typeof k === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(k);
+  function cleanFriend(f) {
+    if (!f || typeof f !== 'object') return null;
+    const name = cleanLabel(f.name, 20), week = inRange(f.week, 0, 280000) ? Math.round(+f.week) : null, best = inRange(f.best, 0, 40000) ? Math.round(+f.best) : null;
+    if (!name || week == null || best == null || best > week || !inRange(f.ts, 946684800000, 4102444800000)) return null;
+    return { id: cleanLabel(String(f.id == null ? '' : f.id), 40) || String(f.ts), name, week, best, streak: inRange(f.streak, 0, 400) ? Math.round(+f.streak) : 0, ts: +f.ts, sample: !!f.sample };
+  }
+  function cleanGroup(g) {
+    if (!g || typeof g !== 'object') return null;
+    const name = cleanLabel(g.name, 40); if (!name) return null;
+    return { id: cleanLabel(String(g.id == null ? '' : g.id), 40) || name, name, kind: KINDS.includes(g.kind) ? g.kind : 'Other', when: cleanLabel(g.when, 40), where: cleanLabel(g.where, 60), sample: !!g.sample };
+  }
+
+  // Returns { ok:true, state } or { ok:false, error }. planIds: allowed plan ids. challengeIds: allowed challenge ids.
+  function sanitizeBackup(raw, planIds, challengeIds) {
     let obj; try { obj = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { return { ok: false, error: 'That file is not a valid backup (it could not be read).' }; }
     if (!obj || typeof obj !== 'object' || obj.app !== 'my-fitness-buddy' || obj.version !== 1 || !obj.data || typeof obj.data !== 'object') return { ok: false, error: 'That file is not a My Fitness Buddy backup.' };
     const d = obj.data;
     if (!Array.isArray(d.entries) || d.entries.length > 5000) return { ok: false, error: 'The backup has too many or unreadable notes.' };
-    const state = { profile: cleanProfile(d.profile) || { name: '' }, entries: d.entries.map(cleanEntry).filter(Boolean), chat: [], plan: null, redeemed: [], ai: null };
+    const state = { profile: cleanProfile(d.profile) || { name: '' }, entries: d.entries.map(cleanEntry).filter(Boolean), chat: [], plan: null, redeemed: [], ai: null, friends: [], groups: [], challenge: null, challengeLog: [] };
+    if (Array.isArray(d.friends)) state.friends = d.friends.slice(0, 30).map(cleanFriend).filter(Boolean);
+    if (Array.isArray(d.groups)) state.groups = d.groups.slice(0, 20).map(cleanGroup).filter(Boolean);
+    if (d.challenge && typeof d.challenge === 'object' && (challengeIds || []).includes(d.challenge.id) && dateKey(d.challenge.startKey)) state.challenge = { id: d.challenge.id, startKey: d.challenge.startKey };
+    if (Array.isArray(d.challengeLog)) state.challengeLog = d.challengeLog.slice(-50).filter((c) => c && (challengeIds || []).includes(c.id) && dateKey(c.doneKey)).map((c) => ({ id: c.id, doneKey: c.doneKey }));
     if (Array.isArray(d.chat)) state.chat = d.chat.slice(-30).filter((m) => m && (m.role === 'user' || m.role === 'assistant')).map((m) => ({ role: m.role, content: str(m.content, 600), level: ['red', 'amber'].includes(m.level) ? m.level : undefined }));
     if (d.plan && typeof d.plan === 'object' && (planIds || []).concat('reward').includes(d.plan.planId) && inRange(d.plan.startedTs, 0, 4102444800000) && inRange(d.plan.endsTs, 0, 4102444800000)) state.plan = { planId: d.plan.planId, startedTs: +d.plan.startedTs, endsTs: +d.plan.endsTs, source: d.plan.source === 'reward' ? 'reward' : 'demo' };
     if (Array.isArray(d.redeemed)) state.redeemed = d.redeemed.slice(0, 200).filter((r) => r && inRange(r.cost, 0, 100000)).map((r) => ({ ts: nz(r.ts, 0, 4102444800000, 0), cost: +r.cost, label: str(r.label, 40), days: nz(r.days, 0, 400, 0) }));

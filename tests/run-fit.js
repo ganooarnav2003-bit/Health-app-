@@ -65,6 +65,6 @@ ok('invalid redemptions (negative or absurd cost) are dropped', b.state.redeemed
 const raw = '{"app":"my-fitness-buddy","version":1,"data":{"profile":{"name":"A","__proto__":{"polluted":true},"constructor":{"prototype":{"x":1}}},"entries":[{"ts":1700000000000,"__proto__":{"polluted":true},"constructor":{"prototype":{"y":1}}}],"__proto__":{"polluted":true}}}';
 const rb = F.sanitizeBackup(raw, []);
 ok('a file with real __proto__ / constructor keys is cleaned and does not pollute Object', rb.ok && ({}).polluted === undefined && ({}).x === undefined && ({}).y === undefined && Object.getPrototypeOf(rb.state.profile) === Object.prototype && rb.state.profile.polluted === undefined && rb.state.entries[0].polluted === undefined);
-ok('the cleaned state has exactly the expected keys', Object.keys(b.state).sort().join() === 'ai,chat,entries,plan,profile,redeemed' && Object.keys(rb.state).sort().join() === 'ai,chat,entries,plan,profile,redeemed');
+ok('the cleaned state has exactly the expected keys', Object.keys(b.state).sort().join() === 'ai,challenge,challengeLog,chat,entries,friends,groups,plan,profile,redeemed' && Object.keys(rb.state).sort().join() === 'ai,challenge,challengeLog,chat,entries,friends,groups,plan,profile,redeemed');
 ok('size limit: 5,001 entries refused', !F.sanitizeBackup({ app: 'my-fitness-buddy', version: 1, data: { entries: new Array(5001).fill({ ts: 1e12 }) } }, []).ok);
 console.log(`\n${pass}/${total} passed`); if (pass !== total) process.exit(1);
