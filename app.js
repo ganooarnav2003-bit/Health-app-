@@ -6,18 +6,12 @@
   const $$ = (s) => [...document.querySelectorAll(s)];
 
   const TXT = {
-    en: { onb_h: 'Your day, in your own words.', p1h: 'Just speak', p1: 'Hindi, Hinglish or English. No forms.', p2h: 'Gentle reminders', p2: 'One small nudge at the right time.', p3h: 'Safe by design', p3: 'Never diagnoses. Urgent signs point to 112.', onb_lead: 'Tell me about your day, the way you would tell family. I will keep the notes.', onb_name: 'Your name (optional)', onb_start: 'Start', onb_priv: 'Your notes stay on this phone. Nothing to sign up for.',
+    en: { onb_h: 'Your day, in your own words.', p1h: 'Just speak', p1: 'Speak or type. No forms.', p2h: 'Gentle reminders', p2: 'One small nudge at the right time.', p3h: 'Safe by design', p3: 'Never diagnoses. Urgent signs point to 112.', onb_lead: 'Tell me about your day, the way you would tell family. I will keep the notes.', onb_name: 'Your name (optional)', onb_start: 'Start', onb_priv: 'Your notes stay on this phone. Nothing to sign up for.',
       water: 'Water', walk: 'Walk', food: 'Food', rough: 'rough estimate', say: 'What did you eat, drink or do today? Just say it.', send: 'Log it', today: "Today's notes", empty: 'Nothing yet.',
       share: 'Share today with family (WhatsApp)', sample: 'Load sample week (made-up)', reset: 'Erase all my notes', water_note: 'If your doctor has limited your fluids, follow the doctor, not this goal.',
       hello: (n) => 'Hello' + (n ? ', ' + n : ''), ph: 'e.g. 2 roti, dal, 1 glass water, 15 min walk', thinking: 'One moment…', noPhoto: 'Photo reading needs the live AI. Please type or say what was on the plate.',
       glass: 'glasses', min: 'min', walkWhy: (g, base) => g < base ? `goal made smaller to match your week` : `goal grows slowly with you`, delConfirm: 'Remove this note?', resetConfirm: 'Erase everything on this phone?',
       live: 'Live AI', demo: 'Demo mode (works offline)', mic: 'Listening…', chips: ['2 roti, dal, sabzi', 'one glass water', '20 minute walk', 'did not walk today'] },
-    hi: { onb_h: 'Aapka din, aapki apni bhasha mein.', p1h: 'Bas boliye', p1: 'Hindi, Hinglish ya English. Koi form nahi.', p2h: 'Halke reminder', p2: 'Sahi samay par ek chhoti yaad.', p3h: 'Surakshit', p3: 'Kabhi diagnosis nahi. Zaroori lakshan par 112.', onb_lead: 'Apna din bataiye, jaise ghar walon ko batate hain. Likhne ka kaam mera.', onb_name: 'Aapka naam (zaroori nahi)', onb_start: 'Shuru karein', onb_priv: 'Aapke notes isi phone mein rehte hain. Sign-up ki zaroorat nahi.',
-      water: 'Paani', walk: 'Walk', food: 'Khana', rough: 'andaaza', say: 'Aaj kya khaya, piya ya kiya? Bas bol dijiye.', send: 'Likh lo', today: 'Aaj ke notes', empty: 'Abhi kuch nahi.',
-      share: 'Aaj ka din parivaar ko bhejein (WhatsApp)', sample: 'Sample hafta dekhein (kalpanik)', reset: 'Mere saare notes mita dein', water_note: 'Agar doctor ne paani kam karne ko kaha hai to doctor ki baat maanein.',
-      hello: (n) => 'Namaste' + (n ? ' ' + n : ''), ph: 'jaise: 2 roti, dal, ek glass paani, 15 min walk', thinking: 'Ek minute…', noPhoto: 'Photo samajhne ke liye live AI chahiye. Kripya likh ya bol kar bataiye thali mein kya tha.',
-      glass: 'glass', min: 'min', walkWhy: (g, base) => g < base ? 'aapke hafte ke hisaab se chhota goal' : 'goal dheere-dheere badhta hai', delConfirm: 'Yeh note hata dein?', resetConfirm: 'Is phone se sab kuch mita dein?',
-      live: 'Live AI', demo: 'Demo mode (bina internet bhi chalta hai)', mic: 'Sun raha hoon…', chips: ['2 roti, dal, sabzi', 'ek glass paani', '20 minute walk', 'aaj walk nahi hui'] },
   };
 
   let live = false;
@@ -26,7 +20,7 @@
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)) || { profile: null, entries: [] }; } catch (e) { return { profile: null, entries: [] }; } }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
-  const lang = () => (st.profile && st.profile.lang) || st.pendingLang || 'en';
+  const lang = () => 'en';
   const todayKey = () => E.dayKey(new Date());
   const entriesOn = (k) => st.entries.filter((e) => E.dayKey(e.ts) === k);
 
@@ -48,10 +42,10 @@
   }
 
   function applyText() {
-    document.documentElement.lang = lang() === 'hi' ? 'hi' : 'en';
+    document.documentElement.lang = 'en';
     $$('[data-t]').forEach((el) => { const v = t(el.dataset.t); if (typeof v === 'string') el.textContent = v; });
     $('#say').placeholder = t('ph');
-    $$('[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang()));
+    
     $('#chips').innerHTML = '';
     t('chips').forEach((c) => { const b = document.createElement('button'); b.textContent = c; b.type = 'button'; b.onclick = () => { const s = $('#say'); s.value = (s.value ? s.value + ', ' : '') + c; s.focus(); }; $('#chips').appendChild(b); });
   }
@@ -63,7 +57,7 @@
     if (!has) return;
     const now = new Date(), g = goals(), sum = E.summarize(entriesOn(todayKey()));
     $('#hello').textContent = t('hello')(st.profile.name);
-    $('#date').textContent = now.toLocaleDateString(lang() === 'hi' ? 'hi-IN' : 'en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('#date').textContent = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
     $('#t-water').textContent = `${sum.water}/${g.water}`;
     $('#t-walk').textContent = `${sum.walkMin}/${g.walk} ${t('min')}`;
     $('#b-water').style.width = Math.min(100, (sum.water / g.water) * 100) + '%';
@@ -86,7 +80,7 @@
       if (e.walkSkipped) bits.push('🚶 ✗');
       if (e.bp) bits.push(`BP ${e.bp.s}/${e.bp.d}`);
       if (e.sugar != null) bits.push(`sugar ${e.sugar}`);
-      if (e.safety && e.safety.level !== 'none') bits.push('⚠ ' + (lang() === 'hi' ? 'doctor ko batayein' : 'tell your doctor'));
+      if (e.safety && e.safety.level !== 'none') bits.push('⚠ ' + 'tell your doctor');
       d.innerHTML = '<div class="t"></div><div class="b"></div>';
       d.querySelector('.t').textContent = new Date(e.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
       d.querySelector('.b').textContent = bits.join(' · ') || e.text;
@@ -136,18 +130,14 @@
   }
 
   // ---- events ----
-  $$('[data-lang]').forEach((b) => b.addEventListener('click', () => {
-    if (st.profile) { st.profile.lang = b.dataset.lang; save(); } else st.pendingLang = b.dataset.lang;
-    render();
-  }));
-  $('#start').onclick = () => { st.profile = { name: $('#name').value.trim(), lang: st.pendingLang || 'en' }; delete st.pendingLang; save(); render(); $('#say').focus(); };
+  $('#start').onclick = () => { st.profile = { name: $('#name').value.trim(), lang: 'en' }; save(); render(); $('#say').focus(); };
   $('#send').onclick = () => submit($('#say').value);
   $('#say').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit($('#say').value); });
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) $('#mic').hidden = true;
   else $('#mic').onclick = () => {
-    const r = new SR(); r.lang = lang() === 'hi' ? 'hi-IN' : 'en-IN'; r.interimResults = false;
+    const r = new SR(); r.lang = 'en-IN'; r.interimResults = false;
     $('#mic').textContent = '…'; $('#reply').hidden = false; $('#reply').className = 'reply'; $('#reply').textContent = t('mic');
     r.onresult = (ev) => { $('#say').value = (($('#say').value ? $('#say').value + ' ' : '') + ev.results[0][0].transcript).trim(); };
     r.onend = () => { $('#mic').textContent = '🎤'; $('#reply').hidden = true; };

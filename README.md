@@ -2,7 +2,7 @@
 
 **Live app:** `TODO: paste your deployed link here` (Vercel = live AI + demo fallback; GitHub Pages = demo mode only)
 
-Say your day in Hindi, Hinglish or English ("2 roti, dal, ek glass paani, 15 min walk"). The AI turns it into a log, adapts your walking goal to what you actually do, and nudges you at the right time. No forms, no sign-up, nothing to install.
+Say your day in plain English ("2 roti, dal, ek glass paani, 15 min walk"). The AI turns it into a log, adapts your walking goal to what you actually do, and nudges you at the right time. No forms, no sign-up, nothing to install.
 
 > Not medical advice. Made-up data only. The app never diagnoses or prescribes and sends red-flag symptoms to 112.
 
