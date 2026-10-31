@@ -96,7 +96,7 @@
   // ---------- safety ----------
   const RED = [
     ['chest', /(chest|seena|seene|chhati|chati|सीने|छाती)[^.,;]{0,22}(pain|dard|tightness|jakad|heavy|bhaari|bhari|dabav|दर्द|जकड़न|दबाव)|(pain|dard|दर्द)[^.,;]{0,18}(chest|seene|chhati|सीने|छाती)/g],
-    ['breath', /(saans|sans|सांस|साँस)[^.,;]{0,22}(phool|phul|takleef|dikkat|ruk|nahi aa|नहीं आ|तकलीफ|फूल)|breathless|short of breath|difficulty breathing|trouble breathing|can'?t breathe|cannot breathe/g],
+    ['breath', /(saans|sans|सांस|साँस)[^.,;]{0,22}(phool|phul|takleef|dikkat|ruk|nahi aa|नहीं आ|तकलीफ|फूल)|breathless|short of breath|difficulty breathing|trouble breathing|can'?t breathe|can ?not breathe|unable to breathe|not able to breathe|hard to breathe|struggling to breathe|gasping|breathing (problem|issue)|dam ghut|दम घुट/g],
     ['faint', /(behosh|बेहोश|faint|fainted|passed out|blackout|black out|unconscious|andhera chha|अंधेरा छा)/g],
     ['heart', /(dil|heart|दिल)[^.,;]{0,15}(ghabra|ghabar|dhadak|palpit|घबरा|धड़क)|(pasina|पसीना|sweating)[^.,;]{0,25}(ghabra|ghabrahat|ghabar|chest|seene)|(ghabra|ghabrahat)[^.,;]{0,25}(pasina|पसीना|sweat)/g],
     ['stroke', /(ek taraf|one side|aadha chehra)[^.,;]{0,25}(kamzor|weak|sunn|numb|tedha)|face[^.,;]{0,12}(droop|tedha)|(bol|zubaan|zuban)[^.,;]{0,18}(nahi|atak|lad)|slurred/g],
@@ -114,10 +114,15 @@
   const MED_OBJ = /(dawai|dawa|dava|tablet|tablets|goli|insulin|medicine|medicines|medication|dose|pill|pills|capsule|syrup|ointment|supplement|antibiotic|painkiller|paracetamol|crocin|dolo|metformin|aspirin|ibuprofen|statin|amlodipine|telmisartan|दवाई|दवा|गोली)/;
   const MED_ACT = /(band|chhod|chod|stop|skip|double|zyada|jyada|kam kar|badal|change|nahi leni|mat lo|mat le|बंद|छोड़|ज्यादा|ज़्यादा)/;
 
-  function negated(text, idx, len) {
+  // strict: the negation word must sit directly next to the symptom (used for EMERGENCY symptoms, where a miss is worst).
+  // wide: up to two words may sit between ("no chest pain", "not feeling any pain"): only used for mild "tell your doctor" notes.
+  function negated(text, idx, len, wide) {
     const after = text.slice(idx + len, idx + len + 20);
-    const before = text.slice(Math.max(0, idx - 10), idx);
-    return /^\s*(hai\s+)?(nahi|nahin|nhi|no|not|नहीं|नही)\b/.test(after) || /\b(no|not|without|koi)\s*$/.test(before);
+    const before = text.slice(Math.max(0, idx - 28), idx);
+    // (?![\p{L}\p{M}]) instead of \b: \b does not work after Devanagari letters and marks
+    if (/^\s*((hai|है)\s+)?(nahi|nahin|nhi|no|not|नहीं|नही)(?![\p{L}\p{M}])/u.test(after)) return true;
+    const neg = '(no|not|without|koi|कोई|बिना)';
+    return wide ? new RegExp('(?<![\\p{L}\\p{M}])' + neg + '\\s+([\\p{L}\\p{M}\'-]+\\s+){0,2}$', 'u').test(before) : new RegExp('(?<![\\p{L}\\p{M}])' + neg + '\\s*$', 'u').test(before);
   }
 
   function readings(text) {
@@ -165,7 +170,7 @@
         re.lastIndex = 0;
         let m;
         while ((m = re.exec(text))) {
-          if (!negated(text, m.index, m[0].length)) { reasons.push(k); bump('amber', k); break; }
+          if (!negated(text, m.index, m[0].length, true)) { reasons.push(k); bump('amber', k); break; }
         }
       });
     }
@@ -173,27 +178,33 @@
     return { level, kind, reasons: [...new Set(reasons)], readings: r };
   }
 
+  // Languages: 'en' English, 'hi' Hindi (Devanagari), 'hg' Hinglish (Hindi in Roman letters).
+  const LG = (l) => (l === 'hi' || l === 'hg' ? l : 'en');
   const SAFETY_TEXT = {
     red: {
       en: 'This sounds serious. Please call 112 (or 108 for an ambulance) or get someone to take you to a doctor now. Do not wait for the app.',
-      hi: 'Yeh serious ho sakta hai. Abhi 112 (ya ambulance ke liye 108) par call karein ya kisi ko saath lekar doctor ke paas jayein. App ka intezaar na karein.',
+      hi: 'यह गंभीर हो सकता है। कृपया अभी 112 (या एम्बुलेंस के लिए 108) पर कॉल करें, या किसी के साथ तुरंत डॉक्टर के पास जाएँ। ऐप के जवाब का इंतज़ार न करें।',
+      hg: 'Yeh serious ho sakta hai. Abhi 112 (ya ambulance ke liye 108) par call karein ya kisi ko saath lekar doctor ke paas jayein. App ka intezaar na karein.',
     },
     mental: {
       en: 'I am sorry you feel this way. Please talk to someone now: Tele-MANAS 14416 (free, 24x7), or a family member. If you are in danger, call 112.',
-      hi: 'Mujhe afsos hai ki aap aisa mehsoos kar rahe hain. Abhi kisi se baat karein: Tele-MANAS 14416 (free, 24x7) ya ghar ke kisi vyakti se. Khatre mein hon to 112 par call karein.',
+      hi: 'आप ऐसा महसूस कर रहे हैं, यह जानकर चिंता हुई। कृपया अभी किसी से बात करें: Tele-MANAS 14416 (मुफ़्त, 24x7) या घर के किसी सदस्य से। अगर आप ख़तरे में हैं तो 112 पर कॉल करें।',
+      hg: 'Aap aisa mehsoos kar rahe hain, yeh jaankar chinta hui. Kripya abhi kisi se baat karein: Tele-MANAS 14416 (free, 24x7) ya ghar ke kisi sadasya se. Agar aap khatre mein hain to 112 par call karein.',
     },
     amber: {
       en: 'Noted. Please tell your doctor about this today. This app cannot tell what it means.',
-      hi: 'Note kar liya. Kripya aaj apne doctor ko bataiye. Yeh app iska matlab nahi bata sakta.',
+      hi: 'नोट कर लिया। कृपया आज ही अपने डॉक्टर को बताइए। यह ऐप इसका मतलब नहीं बता सकता।',
+      hg: 'Note kar liya. Kripya aaj hi apne doctor ko bataiye. Yeh app iska matlab nahi bata sakta.',
     },
     med: {
       en: 'I cannot advise on medicines. Please ask your doctor before changing or skipping anything.',
-      hi: 'Main dawai ke baare mein salah nahi de sakta. Kuch bhi badalne ya chhodne se pehle apne doctor se poochhein.',
+      hi: 'दवाओं के बारे में यहाँ सलाह नहीं दी जाती। कुछ भी बदलने या छोड़ने से पहले कृपया अपने डॉक्टर से पूछें।',
+      hg: 'Dawaiyon ke baare mein yahan salah nahi di jaati. Kuch bhi badalne ya chhodne se pehle kripya apne doctor se poochhein.',
     },
   };
   function safetyMessage(s, lang) {
     if (!s || s.level === 'none') return null;
-    const l = lang === 'hi' ? 'hi' : 'en';
+    const l = LG(lang);
     if (s.reasons.includes('mental')) return SAFETY_TEXT.mental[l];
     if (s.level === 'red') return SAFETY_TEXT.red[l];
     if (s.kind === 'med') return SAFETY_TEXT.med[l];
@@ -201,7 +212,7 @@
   }
 
   // Block diagnosis / prescription wording from any AI-written reply.
-  const BANNED = /(\bdiagnos|you (are suffering|probably have|might have|may have|could have|likely have)|you have (a |an )?(diabet|hypertension|high blood|low blood|heart|cancer|infection|thyroid|an?emia|arthritis|disease|disorder|syndrome|condition)|aapko .{0,25}(bimari|rog|diabetes|hai)\b|\btake \d|\b\d+\s?mg\b|stop taking|increase (your )?dose|\bprescri|dose badha|dawai band kar|dawai le lo|you should take)/i;
+  const BANNED = /(\bdiagnos|you (are suffering|probably have|might have|may have|could have|likely have)|you have (a |an )?(diabet|hypertension|high blood|low blood|heart|cancer|infection|thyroid|an?emia|arthritis|disease|disorder|syndrome|condition)|aapko .{0,25}(bimari|rog|diabetes|hai)\b|आपको .{0,25}(बीमारी|रोग|डायबिटीज|मधुमेह)|(दवा|दवाई|गोली) (बंद|बढ़ा|बढ़ाओ|ले लो)|खुराक बढ़ा|\btake \d|\b\d+\s?mg\b|stop taking|increase (your )?dose|\bprescri|dose badha|dawai band kar|dawai le lo|you should take)/i;
   function guardrail(reply) {
     if (!reply || BANNED.test(reply)) return null;
     let r = String(reply).trim();
@@ -377,16 +388,17 @@
   }
 
   const NUDGE = {
-    breakfast: { en: 'Good morning. Tell me what you had for breakfast: just say it in your own words.', hi: 'Suprabhat. Nashte mein kya liya? Bas bol dijiye, kisi bhi bhasha mein.' },
-    water: (n, g) => ({ en: `Only ${n} glass of water so far. One glass now?`, hi: `Abhi tak sirf ${n} glass paani. Ek glass abhi?` }),
+    breakfast: { en: 'Good morning. Tell me what you had for breakfast: just say it in your own words.', hi: 'सुप्रभात। नाश्ते में क्या लिया? बस अपने शब्दों में बता दीजिए।', hg: 'Suprabhat. Nashte mein kya liya? Bas apne shabdon mein bata dijiye.' },
+    water: (n) => ({ en: `Only ${n} glass of water so far. One glass now?`, hi: `अब तक सिर्फ़ ${n} गिलास पानी। अभी एक गिलास?`, hg: `Abhi tak sirf ${n} glass paani. Ek glass abhi?` }),
     walk: (g, shrunk) => ({
       en: `Walk is still pending. ${g} minutes is enough today${shrunk ? ' (I made it smaller to match your week)' : ''}.`,
-      hi: `Aaj ki walk baaki hai. Aaj sirf ${g} minute kaafi hai${shrunk ? ' (aapke hafte ke hisaab se chhota rakha hai)' : ''}.`,
+      hi: `आज की सैर बाकी है। आज सिर्फ़ ${g} मिनट काफ़ी हैं${shrunk ? ' (आपके हफ़्ते के हिसाब से इसे छोटा रखा है)' : ''}।`,
+      hg: `Aaj ki walk baaki hai. Aaj sirf ${g} minute kaafi hain${shrunk ? ' (aapke hafte ke hisaab se chhota rakha hai)' : ''}.`,
     }),
-    walkSkippedToday: { en: 'No problem about the walk today. Tomorrow we keep it short and easy.', hi: 'Aaj walk nahi hui, koi baat nahi. Kal chhoti si rakhenge.' },
-    protein: { en: 'Protein looks low today. A katori of dal, some curd or an egg with dinner helps.', hi: 'Protein kam hai. Raat ke khane mein dal, dahi ya anda lein.' },
-    dinner: { en: 'Shall we log dinner? A light dinner helps you sleep well.', hi: 'Raat ka khana log karein? Halka khana neend ke liye accha rehta hai.' },
-    good: { en: 'You are on track today. Nothing needed right now.', hi: 'Aaj sab theek chal raha hai. Abhi kuch karne ki zaroorat nahi.' },
+    walkSkippedToday: { en: 'No problem about the walk today. Tomorrow we keep it short and easy.', hi: 'आज सैर नहीं हुई, कोई बात नहीं। कल छोटी और आसान रखेंगे।', hg: 'Aaj walk nahi hui, koi baat nahi. Kal chhoti aur aasaan rakhenge.' },
+    protein: { en: 'Protein looks low today. A katori of dal, some curd or an egg with dinner helps.', hi: 'आज प्रोटीन कम लग रहा है। रात के खाने में एक कटोरी दाल, थोड़ा दही या एक अंडा मदद करेगा।', hg: 'Aaj protein kam lag raha hai. Raat ke khane mein ek katori dal, thoda dahi ya ek anda madad karega.' },
+    dinner: { en: 'Shall we log dinner? A light dinner helps you sleep well.', hi: 'रात का खाना दर्ज करें? हल्का खाना अच्छी नींद में मदद करता है।', hg: 'Raat ka khana likh lein? Halka khana achhi neend mein madad karta hai.' },
+    good: { en: 'You are on track today. Nothing needed right now.', hi: 'आज सब ठीक चल रहा है। अभी कुछ करने की ज़रूरत नहीं।', hg: 'Aaj sab theek chal raha hai. Abhi kuch karne ki zaroorat nahi.' },
   };
 
   function nudge(now, sum, goals, history) {
@@ -405,31 +417,44 @@
     return { kind: 'good', ...NUDGE.good };
   }
 
+  // ---------- food names in each language (also exported for the screen translator) ----------
+  const FOOD_LABEL = {
+    roti: ['रोटी', 'roti'], paratha: ['परांठा', 'paratha'], naan: ['नान', 'naan'], rice: ['चावल', 'chawal'], dal: ['दाल', 'dal'], sabzi: ['सब्ज़ी', 'sabzi'], khichdi: ['खिचड़ी', 'khichdi'],
+    idli: ['इडली', 'idli'], dosa: ['डोसा', 'dosa'], sambar: ['सांभर', 'sambar'], poha: ['पोहा', 'poha'], upma: ['उपमा', 'upma'], curd: ['दही', 'dahi'], 'paneer dish': ['पनीर की सब्ज़ी', 'paneer ki sabzi'],
+    egg: ['अंडा', 'anda'], 'chicken curry': ['चिकन करी', 'chicken curry'], fruit: ['फल', 'phal'], chai: ['चाय', 'chai'], biscuit: ['बिस्कुट', 'biscuit'], samosa: ['समोसा', 'samosa'], mithai: ['मिठाई', 'mithai'],
+    thali: ['थाली', 'thali'], pizza: ['पिज़्ज़ा', 'pizza'], burger: ['बर्गर', 'burger'], sandwich: ['सैंडविच', 'sandwich'], bread: ['ब्रेड', 'bread'], puri: ['पूरी', 'puri'], bhatura: ['भटूरा', 'bhatura'],
+    chole: ['छोले', 'chole'], rajma: ['राजमा', 'rajma'], biryani: ['बिरयानी', 'biryani'], pulao: ['पुलाव', 'pulao'], dhokla: ['ढोकला', 'dhokla'], vada: ['वड़ा', 'vada'], milk: ['दूध', 'doodh'], lassi: ['लस्सी', 'lassi'],
+    juice: ['जूस', 'juice'], oats: ['ओट्स', 'oats'], salad: ['सलाद', 'salad'], soup: ['सूप', 'soup'], nuts: ['मेवे', 'mewe'], kheer: ['खीर', 'kheer'],
+  };
+  const foodName = (name, lang) => { const l = LG(lang), f = FOOD_LABEL[String(name).toLowerCase()]; return f && l !== 'en' ? f[l === 'hi' ? 0 : 1] : name; };
+  const foodRows = () => Object.keys(FOOD_LABEL).map((k) => [k, FOOD_LABEL[k][0], FOOD_LABEL[k][1]]);
+  const UNIT_WORD = { pc: ['piece', 'पीस', 'piece'], katori: ['katori', 'कटोरी', 'katori'], plate: ['plate', 'प्लेट', 'plate'], cup: ['cup', 'कप', 'cup'], slice: ['slice', 'स्लाइस', 'slice'], glass: ['glass', 'गिलास', 'glass'], bowl: ['bowl', 'कटोरा', 'bowl'], handful: ['handful', 'मुट्ठी', 'mutthi'] };
+
   // ---------- reply composition (demo mode) ----------
   const L = {
-    logged: { en: 'Logged', hi: 'Likh liya' },
-    water: { en: 'water', hi: 'paani' },
-    glass: { en: 'glass', hi: 'glass' },
-    walk: { en: 'walk', hi: 'walk' },
-    min: { en: 'min', hi: 'min' },
-    nothing: { en: 'I could not find anything to log. Try: "2 roti, dal, 1 glass water".', hi: 'Kuch log karne layak nahi mila. Aise bataiye: "2 roti, dal, 1 glass paani".' },
-    ask: {
-      en: 'Is this right? Tap the bin to remove anything wrong.',
-      hi: 'Kya yeh sahi hai? Galat ho to bin dabakar hata dijiye.',
-    },
-    thali: { en: 'A thali varies a lot. What was on it? e.g. "2 roti, dal, sabzi, rice".', hi: 'Thali mein bahut kuch ho sakta hai. Kya-kya tha? jaise "2 roti, dal, sabzi, chawal".' },
-    assumed: { en: 'I assumed 1 portion where you did not say a number.', hi: 'Jahan aapne number nahi bataya wahan 1 maana hai.' },
+    logged: { en: 'Logged', hi: 'दर्ज किया', hg: 'Likh liya' },
+    nothing: { en: 'I could not find anything to log. Try: "2 roti, dal, 1 glass water".', hi: 'दर्ज करने लायक कुछ नहीं मिला। ऐसे बताइए: "2 रोटी, दाल, 1 गिलास पानी"।', hg: 'Kuch likhne layak nahi mila. Aise bataiye: "2 roti, dal, 1 glass paani".' },
+    thali: { en: 'A thali varies a lot. What was on it? e.g. "2 roti, dal, sabzi, rice".', hi: 'थाली में बहुत कुछ हो सकता है। उसमें क्या-क्या था? जैसे "2 रोटी, दाल, सब्ज़ी, चावल"।', hg: 'Thali mein bahut kuch ho sakta hai. Usmein kya-kya tha? jaise "2 roti, dal, sabzi, chawal".' },
+    assumed: { en: 'I assumed 1 portion where you did not say a number.', hi: 'जहाँ आपने संख्या नहीं बताई, वहाँ 1 हिस्सा मान लिया है।', hg: 'Jahan aapne number nahi bataya, wahan 1 hissa maan liya hai.' },
+    unknownFood: { en: 'I did not recognise that food. Try simple names such as roti, dal, rice, idli, poha, or a photo with the live AI.', hi: 'यह खाना पहचाना नहीं गया। रोटी, दाल, चावल, इडली, पोहा जैसे सरल नाम आज़माएँ, या लाइव एआई से फ़ोटो भेजें।', hg: 'Yeh khana pehchana nahi gaya. Roti, dal, chawal, idli, poha jaise saral naam try karein, ya live AI se photo bhejein.' },
+  };
+  const wholeMsg = (name, qty, unit, lang) => {
+    const l = LG(lang), n = foodName(name, l), u = (UNIT_WORD[unit] || [unit, unit, unit])[l === 'en' ? 0 : l === 'hi' ? 1 : 2];
+    if (l === 'hi') return `मैंने पूरा ${n} गिना है (${qty} ${u})। अगर आपने कम खाया तो बताइए कितना।`;
+    if (l === 'hg') return `Maine poora ${n} gina hai (${qty} ${u}). Agar aapne kam khaya to bataiye kitna.`;
+    return `I counted a whole ${name} (${qty} ${unit}s). If you ate less, tell me how many.`;
   };
 
   function fmtMeal(m, lang) {
-    if (m.skipped) return (lang === 'hi' ? 'nahi khaya: ' : 'skipped: ') + m.name;
+    const l = LG(lang), nm = foodName(m.name, l);
+    if (m.skipped) return (l === 'hi' ? 'नहीं खाया: ' : l === 'hg' ? 'nahi khaya: ' : 'skipped: ') + nm;
     const q = m.qty === 1 ? '' : m.qty + ' ';
-    return q + m.name;
+    return q + nm;
   }
 
   function analyze(text, ctx) {
     ctx = ctx || {};
-    const lang = ctx.lang === 'hi' ? 'hi' : 'en';
+    const lang = LG(ctx.lang);
     const now = ctx.now ? new Date(ctx.now) : new Date();
     const p = parse(text, now.getHours());
     const safety = assessSafety(text);
@@ -443,9 +468,9 @@
     const eaten = p.meals.filter((m) => !m.skipped);
     const lowM = p.meals.find((m) => m.lowConf);
     if (lowM && lowM.name === 'thali') res.clarify = L.thali[lang];
-    else if (lowM) res.clarify = `I counted a whole ${lowM.name} (${lowM.qty} ${lowM.unit}s). If you ate less, tell me how many.`;
-    else if (!p.meals.length && !p.water && !p.walkMin && !p.steps && !p.walkSkipped && safety.level === 'none' && /(\bate\b|\bhad\b|eaten|khay|खाय|खाई|खाया|breakfast|lunch|dinner|nashta|नाश्ता)/.test(String(text).toLowerCase())) {
-      res.clarify = "I did not recognise that food. Try simple names such as roti, dal, rice, idli, poha, or a photo with the live AI.";
+    else if (lowM) res.clarify = wholeMsg(lowM.name, lowM.qty, lowM.unit, lang);
+    else if (!p.meals.length && !p.water && !p.walkMin && !p.steps && !p.walkSkipped && safety.level === 'none' && /(\bate\b|\bhad\b|eaten|khay|खाय|खाई|खाया|खाना|breakfast|lunch|dinner|nashta|नाश्ता)/.test(String(text).toLowerCase())) {
+      res.clarify = L.unknownFood[lang];
     }
 
     const parts = [];
@@ -454,13 +479,19 @@
     if (eaten.length) {
       const lo = eaten.reduce((a, m) => a + m.kcalLo, 0), hi = eaten.reduce((a, m) => a + m.kcalHi, 0);
       const plo = Math.round(eaten.reduce((a, m) => a + (m.protLo || 0), 0)), phi = Math.round(eaten.reduce((a, m) => a + (m.protHi || 0), 0));
-      logged.push(eaten.map((m) => fmtMeal(m, lang)).join(', ') + ` (~${lo}-${hi} kcal` + (phi ? `, ~${plo}-${phi} g protein` : '') + ')');
+      const protWord = lang === 'hi' ? 'ग्राम प्रोटीन' : 'g protein';
+      logged.push(eaten.map((m) => fmtMeal(m, lang)).join(', ') + ` (~${lo}-${hi} kcal` + (phi ? `, ~${plo}-${phi} ${protWord}` : '') + ')');
     }
-    if (p.water) logged.push(lang === 'en' ? `${p.water} ${p.water === 1 ? 'glass' : 'glasses'} of water` : `${p.water} glass ${L.water[lang]}`);
-    if (p.walkMin || p.steps) logged.push(`walk ${Math.round(p.walkMin)} min, ${res.steps} steps, ~${res.km} km${p.stepsEst ? ' (estimated)' : ''}`);
+    if (p.water) logged.push(lang === 'en' ? `${p.water} ${p.water === 1 ? 'glass' : 'glasses'} of water` : lang === 'hi' ? `${p.water} गिलास पानी` : `${p.water} glass paani`);
+    if (p.walkMin || p.steps) {
+      const w = Math.round(p.walkMin);
+      logged.push(lang === 'hi' ? `सैर ${w} मिनट, ${res.steps} कदम, ~${res.km} किमी${p.stepsEst ? ' (अंदाज़न)' : ''}`
+        : lang === 'hg' ? `walk ${w} min, ${res.steps} kadam, ~${res.km} km${p.stepsEst ? ' (andaazan)' : ''}`
+        : `walk ${w} min, ${res.steps} steps, ~${res.km} km${p.stepsEst ? ' (estimated)' : ''}`);
+    }
     if (res.bp) logged.push(`BP ${res.bp.s}/${res.bp.d}`);
-    if (res.sugar != null) logged.push(`sugar ${res.sugar}`);
-    if (logged.length) parts.push(`${L.logged[lang]}: ${logged.join('; ')}.`);
+    if (res.sugar != null) logged.push(`${lang === 'hi' ? 'शुगर' : 'sugar'} ${res.sugar}`);
+    if (logged.length) parts.push(`${L.logged[lang]}: ${logged.join('; ')}${lang === 'hi' ? '।' : '.'}`);
     else if (!sm && !p.walkSkipped && !p.meals.length && !res.clarify) parts.push(L.nothing[lang]);
     if (p.walkSkipped) parts.push(NUDGE.walkSkippedToday[lang]);
     if (res.clarify) parts.push(res.clarify);
@@ -473,7 +504,7 @@
   // Validate / clamp a model-produced object into the same shape as analyze().
   // The deterministic safety result always wins; the model may only escalate.
   function fromAI(obj, text, ctx) {
-    const lang = ctx && ctx.lang === 'hi' ? 'hi' : 'en';
+    const lang = LG(ctx && ctx.lang);
     const det = assessSafety(text);
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number.isFinite(+v) ? +v : 0));
     const now = ctx && ctx.now ? new Date(ctx.now) : new Date();
@@ -524,71 +555,125 @@
 
 
   // ---------- question answering (demo mode; live mode uses api/ask.js) ----------
-  // ctx.summary = { water, walkMin, kcalLo, kcalHi, meals:[names] }, ctx.goals = { water, walk }
+  // ctx.lang = 'en' | 'hi' | 'hg'. Questions may be asked in any of the three (Hindi, Hinglish or English keywords).
+  // ctx.summary = { water, walkMin, steps, km, kcalLo, kcalHi, protLo, protHi }, ctx.goals = { water, walk, steps, kcal, protein }
+  const Q = {
+    protein: /protein|प्रोटीन/,
+    today: /(how am i|how('s| is) my day|my progress|today.*(summary|so far)|so far today|how much have i|mera din|aaj kaisa|aaj ka din|din kaisa|kaisa raha|aaj ka hisaab|मेरा दिन|आज कैसा|आज का दिन|दिन कैसा|कैसा रहा|आज का हिसाब)/,
+    distance: /(how far|\bkm\b|kilomet|distance|\bsteps?\b|step count|kitna chala|kitni door|kitne kadam|\bkadam\b|doori|कितना चला|कितनी दूर|कितने कदम|कदम|दूरी)/,
+    water: /(water|hydrat|thirst|how much.*drink|paani|pani|पानी|प्यास)/,
+    walk: /(walk|exercise|steps|workout|yoga|sair|tehal|kasrat|vyayam|सैर|टहल|पैदल|कसरत|व्यायाम|योग)/,
+    food: /(dinner|tonight|what (should|can) i eat|light meal|snack|raat ko|raat mein|raat ka khana|kya khau|kya khana|क्या खाऊँ|क्या खाऊं|क्या खाना|रात को|रात में|रात के खाने)/,
+    condition: /(diabet|sugar level|blood sugar|cholesterol|thyroid|bp |blood pressure|hypertension|sugar|शुगर|बीपी|डायबिटीज|मधुमेह|कोलेस्ट्रॉल|थायराइड|ब्लड प्रेशर|बीमारी|bimari)/,
+    calories: /(calorie|kcal|कैलोरी)/,
+    caloriesCtx: /(today|so far|have i|did i|eaten|my |i ate|i had|aaj|abhi tak|kitni|आज|अब तक|कितनी|खाया|khaya)/,
+    nutrition: /(roti|rice|chawal|carb|calorie|kcal|protein|रोटी|चावल|कैलोरी)/,
+    sleep: /(sleep|insomnia|tired|neend|thakan|नींद|थकान|थका)/,
+    about: /(who are you|what are you|what can you|how does this work|how do you work|help|tum kaun|aap kaun|kya kar sakte|madad|तुम कौन|आप कौन|क्या कर सकते|मदद)/,
+  };
+  const pick3 = (lang, en, hi, hg) => (lang === 'hi' ? hi : lang === 'hg' ? hg : en);
+
   function answerQuery(question, ctx) {
     ctx = ctx || {};
-    const q = String(question || '').toLowerCase();
+    const lang = LG(ctx.lang), q = String(question || '').toLowerCase();
     const s = ctx.summary || { water: 0, walkMin: 0, steps: 0, km: 0, kcalLo: 0, kcalHi: 0, meals: [] };
     const g = ctx.goals || { water: 6, walk: 20 };
     const safety = assessSafety(q);
-    const sm = safetyMessage(safety, 'en');
+    const sm = safetyMessage(safety, lang);
     if (safety.level === 'red') return { source: 'safety', safety, answer: sm, topic: 'safety' };
+    const P3 = (en, hi, hg) => pick3(lang, en, hi, hg);
     let topic = 'other', a;
-    if (MED_OBJ.test(q)) { topic = 'medicine'; a = SAFETY_TEXT.med.en; }
-    else if (/protein/.test(q)) {
+    if (MED_OBJ.test(q)) { topic = 'medicine'; a = SAFETY_TEXT.med[lang]; }
+    else if (Q.protein.test(q)) {
       topic = 'protein';
       const pt = g.protein;
-      const sofar = s.protHi ? ` So far today you have had roughly ${s.protLo}-${s.protHi} g.` : ' Nothing with protein is logged yet today.';
-      if (pt && pt.status === 'ok') a = `For your age and weight, a common range is about ${pt.lo}-${pt.hi} g of protein a day (${pt.perKgLo}-${pt.perKgHi} g per kg), spread over your meals.${sofar} Dal, curd, paneer, eggs, milk and sprouts all help.`;
-      else if (pt && pt.status === 'limited') a = 'You told me your doctor has limited your protein, so please follow your doctor. I will not suggest a target.';
-      else a = `Add your age and weight in the Me tab and I will work out a range. In general, adults need about 0.8-1.0 g per kg a day, and many older adults do better with 1.0-1.2 g per kg. If you have kidney disease, follow your doctor.${sofar}`;
-    } else if (/(how am i|how('s| is) my day|my progress|today.*(summary|so far)|so far today|how much have i)/.test(q)) {
+      const sofar = s.protHi ? P3(` So far today you have had roughly ${s.protLo}-${s.protHi} g.`, ` आज अब तक आपने लगभग ${s.protLo}-${s.protHi} ग्राम लिया है।`, ` Aaj ab tak aapne lagbhag ${s.protLo}-${s.protHi} g liya hai.`)
+        : P3(' Nothing with protein is logged yet today.', ' आज अभी प्रोटीन वाली कोई चीज़ दर्ज नहीं हुई।', ' Aaj abhi protein wali koi cheez darj nahi hui.');
+      if (pt && pt.status === 'ok') a = P3(`For your age and weight, a common range is about ${pt.lo}-${pt.hi} g of protein a day (${pt.perKgLo}-${pt.perKgHi} g per kg), spread over your meals.${sofar} Dal, curd, paneer, eggs, milk and sprouts all help.`,
+        `आपकी उम्र और वज़न के हिसाब से रोज़ लगभग ${pt.lo}-${pt.hi} ग्राम प्रोटीन आम तौर पर ठीक माना जाता है (${pt.perKgLo}-${pt.perKgHi} ग्राम प्रति किलो), जिसे खानों में बाँट लें।${sofar} दाल, दही, पनीर, अंडे, दूध और अंकुरित अनाज सब मदद करते हैं।`,
+        `Aapki umar aur wazan ke hisaab se roz lagbhag ${pt.lo}-${pt.hi} g protein aam taur par theek maana jaata hai (${pt.perKgLo}-${pt.perKgHi} g per kilo), jise khanon mein baant lein.${sofar} Dal, dahi, paneer, ande, doodh aur sprouts sab madad karte hain.`);
+      else if (pt && pt.status === 'limited') a = P3('You told me your doctor has limited your protein, so please follow your doctor. I will not suggest a target.', 'आपने बताया है कि डॉक्टर ने आपका प्रोटीन सीमित किया है, इसलिए कृपया डॉक्टर की बात मानें। यहाँ कोई लक्ष्य नहीं बताया जाएगा।', 'Aapne bataya hai ki doctor ne aapka protein seemit kiya hai, isliye kripya doctor ki baat maanein. Yahan koi target nahi bataya jaayega.');
+      else a = P3(`Add your age and weight in the Me tab and I will work out a range. In general, adults need about 0.8-1.0 g per kg a day, and many older adults do better with 1.0-1.2 g per kg. If you have kidney disease, follow your doctor.${sofar}`,
+        `"मैं" टैब में अपनी उम्र और वज़न डालिए, मात्रा निकालने का काम मेरा। आम तौर पर वयस्कों को रोज़ लगभग 0.8-1.0 ग्राम प्रति किलो चाहिए, और कई बुज़ुर्गों को 1.0-1.2 ग्राम प्रति किलो बेहतर रहता है। किडनी की बीमारी हो तो डॉक्टर की बात मानें।${sofar}`,
+        `"Main" tab mein apni umar aur wazan daaliye, matra nikaalne ka kaam mera. Aam taur par vayask logon ko roz lagbhag 0.8-1.0 g per kilo chahiye, aur kai buzurgon ko 1.0-1.2 g per kilo behtar rehta hai. Kidney ki bimari ho to doctor ki baat maanein.${sofar}`);
+    } else if (Q.today.test(q)) {
       topic = 'today';
-      const food = s.kcalHi ? ` Food so far is roughly ${s.kcalLo}-${s.kcalHi} kcal.` : ' No food logged yet.';
-      a = `Today: water ${s.water} of ${g.water} glasses, walking ${s.walkMin} of ${g.walk} minutes (${s.steps || 0} steps, ${s.km || 0} km).${food}`;
-    } else if (/(how far|\bkm\b|kilomet|distance|\bsteps?\b|step count)/.test(q)) {
+      const food = s.kcalHi ? P3(` Food so far is roughly ${s.kcalLo}-${s.kcalHi} kcal.`, ` अब तक का खाना लगभग ${s.kcalLo}-${s.kcalHi} kcal है।`, ` Ab tak ka khana lagbhag ${s.kcalLo}-${s.kcalHi} kcal hai.`) : P3(' No food logged yet.', ' अभी तक कोई खाना दर्ज नहीं हुआ।', ' Abhi tak koi khana darj nahi hua.');
+      a = P3(`Today: water ${s.water} of ${g.water} glasses, walking ${s.walkMin} of ${g.walk} minutes (${s.steps || 0} steps, ${s.km || 0} km).${food}`,
+        `आज: पानी ${g.water} में से ${s.water} गिलास, सैर ${g.walk} में से ${s.walkMin} मिनट (${s.steps || 0} कदम, ${s.km || 0} किमी)।${food}`,
+        `Aaj: paani ${g.water} mein se ${s.water} glass, walk ${g.walk} mein se ${s.walkMin} minute (${s.steps || 0} kadam, ${s.km || 0} km).${food}`);
+    } else if (Q.distance.test(q)) {
       topic = 'distance';
-      a = `You have walked ${s.steps || 0} steps today, about ${s.km || 0} km. Distance is estimated from steps at roughly 0.7 m per step. Your goal today is ${g.steps || g.walk * STEPS_PER_MIN} steps.`;
-    } else if (/(water|hydrat|thirst|how much.*drink)/.test(q)) {
+      const goal = g.steps || g.walk * STEPS_PER_MIN;
+      a = P3(`You have walked ${s.steps || 0} steps today, about ${s.km || 0} km. Distance is estimated from steps at roughly 0.7 m per step. Your goal today is ${goal} steps.`,
+        `आज आप ${s.steps || 0} कदम चले हैं, यानी लगभग ${s.km || 0} किमी। दूरी कदमों से, लगभग 0.7 मीटर प्रति कदम के हिसाब से, आँकी गई है। आज का आपका लक्ष्य ${goal} कदम है।`,
+        `Aaj aap ${s.steps || 0} kadam chale hain, yaani lagbhag ${s.km || 0} km. Doori kadmon se, lagbhag 0.7 meter per kadam ke hisaab se, aanki gayi hai. Aaj ka aapka target ${goal} kadam hai.`);
+    } else if (Q.water.test(q)) {
       topic = 'water';
-      a = `Many adults aim for about ${g.water}-8 glasses a day, more in hot weather. You are at ${s.water} today. If your doctor has limited your fluids, follow your doctor.`;
-    } else if (/(walk|exercise|steps|workout|yoga)/.test(q)) {
+      a = P3(`Many adults aim for about ${g.water}-8 glasses a day, more in hot weather. You are at ${s.water} today. If your doctor has limited your fluids, follow your doctor.`,
+        `कई वयस्क रोज़ लगभग ${g.water}-8 गिलास पानी का लक्ष्य रखते हैं, गर्मी में ज़्यादा। आज आप ${s.water} गिलास पर हैं। अगर डॉक्टर ने आपके तरल पदार्थ सीमित किए हैं तो डॉक्टर की बात मानें।`,
+        `Kai vayask roz lagbhag ${g.water}-8 glass paani ka target rakhte hain, garmi mein zyada. Aaj aap ${s.water} glass par hain. Agar doctor ne aapke liquids seemit kiye hain to doctor ki baat maanein.`);
+    } else if (Q.walk.test(q)) {
       topic = 'walk';
-      a = `Short, regular walks beat rare long ones. Your goal today is ${g.walk} minutes, set from your last few days. Stop and tell your doctor if a walk causes pain, dizziness or breathlessness.`;
-    } else if (/(dinner|tonight|what (should|can) i eat|light meal|snack)/.test(q)) {
+      a = P3(`Short, regular walks beat rare long ones. Your goal today is ${g.walk} minutes, set from your last few days. Stop and tell your doctor if a walk causes pain, dizziness or breathlessness.`,
+        `छोटी और नियमित सैर, कभी-कभार की लंबी सैर से बेहतर है। आज आपका लक्ष्य ${g.walk} मिनट है, जो आपके पिछले कुछ दिनों से तय हुआ है। अगर सैर में दर्द, चक्कर या साँस फूलने जैसा लगे तो रुकें और डॉक्टर को बताएँ।`,
+        `Chhoti aur niyamit walk, kabhi-kabhar ki lambi walk se behtar hai. Aaj aapka target ${g.walk} minute hai, jo aapke pichhle kuch dinon se tay hua hai. Agar walk mein dard, chakkar ya saans phoolne jaisa lage to rukein aur doctor ko bataiye.`);
+    } else if (Q.food.test(q)) {
       topic = 'food';
-      a = 'A light, early meal usually sits well: dal or curd, one or two roti, and a vegetable. ' + (s.kcalHi ? `You have logged roughly ${s.kcalLo}-${s.kcalHi} kcal so far.` : 'Nothing is logged yet today.') + ' For a plan that fits your health conditions, ask a doctor or dietitian.';
-    } else if (/(diabet|sugar level|blood sugar|cholesterol|thyroid|bp |blood pressure|hypertension)/.test(q)) {
+      const sofar = s.kcalHi ? P3(`You have logged roughly ${s.kcalLo}-${s.kcalHi} kcal so far.`, `अब तक आपने लगभग ${s.kcalLo}-${s.kcalHi} kcal दर्ज किया है।`, `Ab tak aapne lagbhag ${s.kcalLo}-${s.kcalHi} kcal darj kiya hai.`) : P3('Nothing is logged yet today.', 'आज अभी कुछ दर्ज नहीं हुआ है।', 'Aaj abhi kuch darj nahi hua hai.');
+      a = P3(`A light, early meal usually sits well: dal or curd, one or two roti, and a vegetable. ${sofar} For a plan that fits your health conditions, ask a doctor or dietitian.`,
+        `हल्का और जल्दी खाया खाना आम तौर पर ठीक बैठता है: दाल या दही, एक-दो रोटी और एक सब्ज़ी। ${sofar} अपनी सेहत के हिसाब से योजना के लिए डॉक्टर या डाइटीशियन से पूछें।`,
+        `Halka aur jaldi khaya khana aam taur par theek baithta hai: dal ya dahi, ek-do roti aur ek sabzi. ${sofar} Apni sehat ke hisaab se plan ke liye doctor ya dietitian se poochhein.`);
+    } else if (Q.condition.test(q)) {
       topic = 'condition';
-      a = 'I cannot advise on health conditions or targets. I can keep your readings in the log so you can show them to your doctor.';
-    } else if (/(calorie|kcal)/.test(q) && /(today|so far|have i|did i|eaten|my |i ate|i had)/.test(q)) {
+      a = P3('I cannot advise on health conditions or targets. I can keep your readings in the log so you can show them to your doctor.',
+        'सेहत की स्थितियों या लक्ष्यों पर यहाँ सलाह नहीं दी जाती। आपकी रीडिंग लॉग में रखी जा सकती हैं ताकि आप डॉक्टर को दिखा सकें।',
+        'Sehat ki sthitiyon ya targets par yahan salah nahi di jaati. Aapki readings log mein rakhi ja sakti hain taaki aap doctor ko dikha sakein.');
+    } else if (Q.calories.test(q) && Q.caloriesCtx.test(q)) {
       topic = 'calories';
       a = s.kcalHi
-        ? `So far today you have had roughly ${s.kcalLo}-${s.kcalHi} kcal. This is a rough range, and a common reference for older adults is around ${g.kcal || 1800} kcal a day. Your doctor or a dietitian can give you a number that fits you.`
-        : 'Nothing is logged yet today, so there are no calories to add up. Tell me what you ate and I will log it.';
-    } else if (/(roti|rice|chawal|carb|calorie|kcal|protein)/.test(q)) {
+        ? P3(`So far today you have had roughly ${s.kcalLo}-${s.kcalHi} kcal. This is a rough range, and a common reference for older adults is around ${g.kcal || 1800} kcal a day. Your doctor or a dietitian can give you a number that fits you.`,
+          `आज अब तक आपने लगभग ${s.kcalLo}-${s.kcalHi} kcal लिया है। यह मोटा अंदाज़ा है, और बुज़ुर्गों के लिए आम तौर पर रोज़ लगभग ${g.kcal || 1800} kcal का संदर्भ लिया जाता है। आपके लिए सही संख्या डॉक्टर या डाइटीशियन बता सकते हैं।`,
+          `Aaj ab tak aapne lagbhag ${s.kcalLo}-${s.kcalHi} kcal liya hai. Yeh motaa andaza hai, aur buzurgon ke liye aam taur par roz lagbhag ${g.kcal || 1800} kcal ka reference liya jaata hai. Aapke liye sahi number doctor ya dietitian bata sakte hain.`)
+        : P3('Nothing is logged yet today, so there are no calories to add up. Tell me what you ate and I will log it.', 'आज अभी कुछ दर्ज नहीं हुआ, इसलिए जोड़ने को कैलोरी नहीं हैं। बताइए आपने क्या खाया, वह दर्ज हो जाएगा।', 'Aaj abhi kuch darj nahi hua, isliye jodne ko calories nahi hain. Bataiye aapne kya khaya, darj ho jaayega.');
+    } else if (Q.nutrition.test(q)) {
       topic = 'nutrition';
-      a = 'Calories here are rough ranges for typical home portions, not exact. Pairing roti or rice with dal and vegetables is a common, balanced pattern. For specific targets, ask a doctor or dietitian.';
-    } else if (/(sleep|insomnia|tired)/.test(q)) {
+      a = P3('Calories here are rough ranges for typical home portions, not exact. Pairing roti or rice with dal and vegetables is a common, balanced pattern. For specific targets, ask a doctor or dietitian.',
+        'यहाँ कैलोरी घर की आम मात्रा के मोटे अंदाज़े हैं, सटीक नहीं। रोटी या चावल के साथ दाल और सब्ज़ी लेना एक आम, संतुलित तरीका है। किसी ख़ास लक्ष्य के लिए डॉक्टर या डाइटीशियन से पूछें।',
+        'Yahan calories ghar ki aam matra ke motaa andaze hain, sateek nahi. Roti ya chawal ke saath dal aur sabzi lena ek aam, santulit tareeka hai. Kisi khaas target ke liye doctor ya dietitian se poochhein.');
+    } else if (Q.sleep.test(q)) {
       topic = 'sleep';
-      a = 'This app does not track sleep. A regular bedtime and an early, light dinner help many people. If sleep trouble continues, please talk to your doctor.';
-    } else if (/(who are you|what are you|what can you|how does this work|how do you work|help)/.test(q)) {
+      a = P3('You can log your sleep in the Track tab. A regular bedtime and an early, light dinner help many people. If sleep trouble continues, please talk to your doctor.',
+        'अपनी नींद आप "दर्ज करें" टैब में लिख सकते हैं। सोने का नियमित समय और जल्दी, हल्का खाना कई लोगों की मदद करता है। नींद की परेशानी बनी रहे तो कृपया डॉक्टर से बात करें।',
+        'Apni neend aap "Track" tab mein likh sakte hain. Sone ka niyamit samay aur jaldi, halka khana kai logon ki madad karta hai. Neend ki pareshani bani rahe to kripya doctor se baat karein.');
+    } else if (Q.about.test(q)) {
       topic = 'about';
-      a = 'I log what you tell me, adapt your walking goal to your week, and answer simple questions about water, walking, food and your day. I never diagnose or advise on medicines.';
+      a = P3('I log what you tell me, adapt your walking goal to your week, and answer simple questions about water, walking, food and your day. I never diagnose or advise on medicines.',
+        'यहाँ आप जो बताते हैं वह दर्ज होता है, सैर का लक्ष्य आपके हफ़्ते के हिसाब से बदलता है, और पानी, सैर, खाने और आपके दिन के सरल सवालों के जवाब मिलते हैं। यहाँ कभी बीमारी नहीं बताई जाती और दवाओं पर सलाह नहीं दी जाती।',
+        'Yahan aap jo bataate hain woh darj hota hai, walk ka target aapke hafte ke hisaab se badalta hai, aur paani, walk, khane aur aapke din ke saral sawaalon ke jawaab milte hain. Yahan kabhi bimari nahi batayi jaati aur dawaiyon par salah nahi di jaati.');
     } else {
-      a = 'I can help with water, walking, simple food questions and your day so far. For anything else about your health, please ask your doctor.';
+      a = P3('I can help with water, walking, simple food questions and your day so far. For anything else about your health, please ask your doctor.',
+        'पानी, सैर, खाने के सरल सवालों और आपके अब तक के दिन में मदद मिल सकती है। सेहत से जुड़ी किसी और बात के लिए कृपया अपने डॉक्टर से पूछें।',
+        'Paani, walk, khane ke saral sawaalon aur aapke ab tak ke din mein madad mil sakti hai. Sehat se judi kisi aur baat ke liye kripya apne doctor se poochhein.');
     }
     if (safety.level === 'amber' && topic !== 'medicine') a += ' ' + sm;
     return { source: 'demo', safety, answer: a, topic };
   }
 
   function familySummary(name, sum, goals, lang) {
-    const n = name || (lang === 'hi' ? 'Aaj' : 'Today');
-    const kcal = sum.kcalHi ? `${sum.kcalLo}-${sum.kcalHi} kcal (rough)` : '-';
-    const flag = sum.flags.length ? (lang === 'hi' ? '\nDhyaan: kuch symptoms note kiye gaye, doctor ko batana hai.' : '\nNote: symptoms were logged, please check with the doctor.') : '';
-    if (lang === 'hi') return `${n} ka din:\nPaani: ${sum.water}/${goals.water} glass\nWalk: ${sum.walkMin}/${goals.walk} min\nKhana: ${sum.meals.length} items, ${kcal}${flag}\n(My Fitness Buddy - medical salah nahi)`;
+    const l = LG(lang), n = name || (l === 'en' ? 'Today' : 'Aaj');
+    const kcal = sum.kcalHi ? `${sum.kcalLo}-${sum.kcalHi} kcal (${l === 'hi' ? 'मोटा अंदाज़ा' : l === 'hg' ? 'motaa andaza' : 'rough'})` : '-';
+    if (l === 'hi') {
+      const flag = sum.flags.length ? '\nध्यान दें: कुछ लक्षण दर्ज हुए हैं, कृपया डॉक्टर को बताएँ।' : '';
+      return `${name ? name + ' का दिन' : 'आज का दिन'}:\nपानी: ${sum.water}/${goals.water} गिलास\nसैर: ${sum.walkMin}/${goals.walk} मिनट, ${sum.steps} कदम, ${sum.km} किमी\nखाना: ${sum.meals.length} चीज़ें, ${kcal}${sum.protHi ? `\nप्रोटीन: लगभग ${sum.protLo}-${sum.protHi} ग्राम (मोटा अंदाज़ा)` : ''}${flag}\n(माय फ़िटनेस बडी - चिकित्सा सलाह नहीं)`;
+    }
+    if (l === 'hg') {
+      const flag = sum.flags.length ? '\nDhyaan dein: kuch lakshan darj hue hain, kripya doctor ko bataiye.' : '';
+      return `${name ? name + ' ka din' : 'Aaj ka din'}:\nPaani: ${sum.water}/${goals.water} glass\nWalk: ${sum.walkMin}/${goals.walk} min, ${sum.steps} kadam, ${sum.km} km\nKhana: ${sum.meals.length} cheezein, ${kcal}${sum.protHi ? `\nProtein: lagbhag ${sum.protLo}-${sum.protHi} g (motaa andaza)` : ''}${flag}\n(My Fitness Buddy - medical salah nahi)`;
+    }
+    const flag = sum.flags.length ? '\nNote: symptoms were logged, please check with the doctor.' : '';
     return `${n}'s day:\nWater: ${sum.water}/${goals.water} glasses\nWalk: ${sum.walkMin}/${goals.walk} min, ${sum.steps} steps, ${sum.km} km\nFood: ${sum.meals.length} items, ${kcal}${sum.protHi ? `\nProtein: about ${sum.protLo}-${sum.protHi} g (rough)` : ''}${flag}\n(My Fitness Buddy - not medical advice)`;
   }
 
-  return { proteinTarget, kcalReference, SLOTS, kmFromSteps, STEP_KM, STEPS_PER_MIN, answerQuery, parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };
+  return { LG, foodName, foodRows, proteinTarget, kcalReference, SLOTS, kmFromSteps, STEP_KM, STEPS_PER_MIN, answerQuery, parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };
 });

@@ -2,6 +2,15 @@
   'use strict';
   const E = window.HealthEngine, TP = window.HealthTips, W = window.HealthWalk, PL = window.HealthPlans, WT = window.HealthWatch, F = window.HealthFit, CM = window.HealthCommunity;
   const KEY = 'dinchariya.v1'; // storage key kept from the first version so saved notes survive the rename
+  // ---- languages: English, Hindi (Devanagari), Hinglish (Roman). The screen translator lives in i18n.js ----
+  const I18N = window.HealthI18n;
+  I18N.load(window.HealthStrings || []); I18N.load(E.foodRows());
+  I18N.attach(document);
+  // Hindi and Hinglish are still being finished. Keep this false until tests/browser-i18n.js reports no missing translations:
+  // while it is false the app is English only, the language pickers are hidden and no saved language is applied.
+  const LANGUAGES_ENABLED = false;
+  if (LANGUAGES_ENABLED) { try { I18N.setLang(localStorage.getItem('dinchariya.lang')); } catch (e) { /* private mode: stay in English */ } }
+  const T = (s) => I18N.tr(s), LANG = () => I18N.lang, LOC = () => (I18N.lang === 'hi' ? 'hi-IN' : 'en-IN');
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const GLASS_ML = 250;
@@ -23,7 +32,7 @@
   const entriesOn = (k) => st.entries.filter((e) => E.dayKey(e.ts) === k);
   const sumOn = (k) => E.summarize(entriesOn(k));
   const newId = () => Date.now() + '' + Math.random().toString(16).slice(2, 6);
-  const fmt = (n) => Number(n).toLocaleString('en-IN');
+  const fmt = (n) => Number(n).toLocaleString(LOC());
   const short = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(Math.round(n * 10) / 10));
   const mid = (a, b) => (a + b) / 2;
 
@@ -82,7 +91,7 @@
   function tile(el, color, icon, pct, label, value, sub) {
     el.innerHTML = ring(pct, color, icon) + '<div class="rtx"><span class="rl"></span><span class="rv"></span><span class="rs"></span></div>';
     el.querySelector('.rl').textContent = label; el.querySelector('.rv').textContent = value; el.querySelector('.rs').textContent = sub;
-    el.setAttribute('aria-label', `${label}: ${value}, ${sub}`);
+    el.setAttribute('aria-label', `${T(label)}: ${T(String(value))}, ${T(sub)}`);
   }
 
   function streak() {
@@ -99,17 +108,18 @@
       prot: { label: 'Protein', get: (s) => Math.round(mid(s.protLo, s.protHi)), goal: g.protein.status === 'ok' ? Math.round(mid(g.protein.lo, g.protein.hi)) : null, f: short },
     };
     const d = defs[metric], days = [];
-    for (let i = 6; i >= 0; i--) { const dt = new Date(); dt.setDate(dt.getDate() - i); days.push({ label: dt.toLocaleDateString('en-IN', { weekday: 'short' }).slice(0, 3), v: d.get(sumOn(E.dayKey(dt))), today: i === 0 }); }
+    for (let i = 6; i >= 0; i--) { const dt = new Date(); dt.setDate(dt.getDate() - i); days.push({ label: dt.toLocaleDateString(LOC(), { weekday: 'short' }).slice(0, 3), v: d.get(sumOn(E.dayKey(dt))), today: i === 0 }); }
     return { d, days };
   }
 
   function renderHome(g, sum) {
     const now = new Date();
-    $('#hello').textContent = 'Hello' + (st.profile && st.profile.name ? ', ' + st.profile.name : '');
-    $('#date').textContent = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-    $('#updated').textContent = 'Updated ' + lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const hello = $('#hello'), nm0 = st.profile && st.profile.name; hello.textContent = ''; hello.append('Hello' + (nm0 ? ',' : ''));
+    if (nm0) { hello.append(' '); const sp = document.createElement('span'); sp.setAttribute('translate', 'no'); sp.textContent = nm0; hello.append(sp); } // a name is never translated
+    $('#date').textContent = now.toLocaleDateString(LOC(), { weekday: 'long', day: 'numeric', month: 'long' });
+    $('#updated').textContent = 'Updated ' + lastUpdated.toLocaleTimeString(LOC(), { hour: '2-digit', minute: '2-digit' });
     const n = E.nudge(now, sum, g, history());
-    const nd = $('#nudge'); nd.textContent = n.en; nd.classList.toggle('warn', n.kind === 'walk-skipped');
+    const nd = $('#nudge'); nd.textContent = n[LANG()]; nd.classList.toggle('warn', n.kind === 'walk-skipped');
     $('#setup').hidden = g.protein.status !== 'need-data';
 
     const km = mid(sum.kcalLo, sum.kcalHi);
@@ -136,7 +146,7 @@
     if (d.goal) { const gl = document.createElement('div'); gl.className = 'goal'; gl.style.bottom = (22 + (d.goal / top) * AREA) + 'px'; chart.appendChild(gl); }
     const best = days.reduce((a, b) => (b.v > a.v ? b : a), days[0]);
     $('#chart-note').textContent = (best.v ? `${d.label}, last 7 days. Best day: ${best.today ? 'today' : best.label} (${fmt(best.v)}).` + (metric === 'kcal' || metric === 'prot' ? ' Midpoint of the estimated range.' : '') : `${d.label}: nothing logged in the last 7 days yet.`) + (d.goal ? ` Dashed line = your goal (${fmt(d.goal)}).` : '');
-    chart.setAttribute('aria-label', `${d.label} for the last 7 days: ` + days.map((x) => `${x.today ? 'today' : x.label} ${x.v}`).join(', '));
+    chart.setAttribute('aria-label', T(`${d.label} for the last 7 days`) + ': ' + days.map((x) => `${x.today ? T('today') : x.label} ${x.v}`).join(', '));
     $$('#metricchips button').forEach((b) => b.classList.toggle('on', b.dataset.m === metric));
 
     renderRewardTile();
@@ -144,7 +154,9 @@
     renderCommunityTile();
     const tip = TP.pickDaily(todayKey(), sum, g)[0];
     $('#teaser').innerHTML = '<span class="kick">Today\'s health digest</span><b></b><span></span>';
-    $('#teaser').querySelector('b').textContent = tip.title; $('#teaser span:last-child').textContent = tip.body.length > 110 ? tip.body.slice(0, 108).replace(/\s+\S*$/, '') + '… Read more' : tip.body;
+    $('#teaser').querySelector('b').textContent = tip.title;
+    const body = T(tip.body), tb = $('#teaser span:last-child'); tb.setAttribute('translate', 'no'); // translate the whole tip first, then shorten it
+    tb.textContent = body.length > 110 ? body.slice(0, 108).replace(/\s+\S*$/, '') + '… ' + T('Read more') : body;
   }
 
   function renderTrack(g, sum) {
@@ -205,10 +217,10 @@
       if (e.hr) bits.push(`♥ avg ${e.hr.avg} · max ${e.hr.max}`);
       if (e.safety && e.safety.level !== 'none') bits.push('⚠ tell your doctor');
       d.innerHTML = '<div class="t"></div><div class="b"></div>';
-      d.querySelector('.t').textContent = new Date(e.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      d.querySelector('.t').textContent = new Date(e.ts).toLocaleTimeString(LOC(), { hour: '2-digit', minute: '2-digit' });
       d.querySelector('.b').textContent = bits.join(' · ') || e.text;
       const del = document.createElement('button'); del.textContent = '🗑'; del.setAttribute('aria-label', 'Remove this note');
-      del.onclick = () => { if (confirm('Remove this note?')) { st.entries = st.entries.filter((x) => x.id !== e.id); save(); render(); } };
+      del.onclick = () => { if (confirm(T('Remove this note?'))) { st.entries = st.entries.filter((x) => x.id !== e.id); save(); render(); } };
       li.append(d, del); ul.appendChild(li);
     });
   }
@@ -223,10 +235,10 @@
     return d;
   }
   function renderTips(g, sum) {
-    $('#tips-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' · 3 tips for today';
+    $('#tips-date').textContent = new Date().toLocaleDateString(LOC(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' · 3 tips for today';
     const t = $('#tips-today'); t.innerHTML = ''; TP.pickDaily(todayKey(), sum, g).forEach((x) => t.appendChild(tipCard(x)));
     const e = $('#tips-earlier'); e.innerHTML = '';
-    for (let i = 1; i <= 3; i++) { const k = dayKeyOffset(-i), x = TP.pickDaily(k, null, g)[0]; const lab = document.createElement('div'); lab.className = 'why'; lab.textContent = new Date(k.replace(/-/g, '/')).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' }); e.appendChild(lab); e.appendChild(tipCard(x, true)); }
+    for (let i = 1; i <= 3; i++) { const k = dayKeyOffset(-i), x = TP.pickDaily(k, null, g)[0]; const lab = document.createElement('div'); lab.className = 'why'; lab.textContent = new Date(k.replace(/-/g, '/')).toLocaleDateString(LOC(), { weekday: 'long', day: 'numeric', month: 'short' }); e.appendChild(lab); e.appendChild(tipCard(x, true)); }
     const cats = $('#tipcats'); cats.innerHTML = '';
     [['all', 'All'], ...Object.entries(TP.CATS)].forEach(([k, label]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (k === tipCat) b.className = 'on'; b.onclick = () => { tipCat = k; tipsOpen = false; renderTips(g, sum); }; cats.appendChild(b); });
     const all = $('#tips-all'); all.innerHTML = '';
@@ -248,12 +260,12 @@
       add(`<div class="protbig">${p.lo}–${p.hi} g</div><p class="muted">a day, or about ${p.perMealLo}–${p.perMealHi} g at each of 3 meals</p>`);
       add(`<div class="protrow"><div><span class="v">${sum.protHi ? sum.protLo + '–' + sum.protHi : '0'} g</span><span class="k">so far today (rough)</span></div><div><span class="v">${p.perKgLo}–${p.perKgHi}</span><span class="k">g per kg of body weight</span></div></div>`);
       const ref = E.kcalReference(prof);
-      if (ref) add(`<p class="muted">Calorie reference for your age, size and activity: about <b>${fmt(ref)} kcal</b> a day to stay at your weight (estimate).</p>`);
+      if (ref) add(`<p class="muted">Calorie reference for your age, size and activity: about ${fmt(ref)} kcal a day to stay at your weight (estimate).</p>`);
       add('<p class="why">How this is worked out: a general range per kg of body weight for your age and activity, multiplied by your weight. It is a general guide, not a prescription. Ask your doctor or dietitian, especially if you have kidney, liver or other conditions.</p>');
     } else if (p.status === 'limited') {
       add('<p>You told me your doctor has limited your protein, so I will not show a target. Please follow your doctor\'s advice. I will still keep a rough count of what you eat so you can share it with them.</p>');
     } else {
-      add('<p>Add your <b>age</b> and <b>weight</b> above and I will work out a daily protein range.</p><p class="muted">In general, adults need about 0.8–1.0 g of protein per kg of body weight a day, and many older adults do better with 1.0–1.2 g per kg. If you have kidney disease, follow your doctor.</p>');
+      add('<p>Add your age and weight above and I will work out a daily protein range.</p><p class="muted">In general, adults need about 0.8–1.0 g of protein per kg of body weight a day, and many older adults do better with 1.0–1.2 g per kg. If you have kidney disease, follow your doctor.</p>');
     }
     add('<p class="why">Good sources: dal, chana, rajma, curd, paneer, milk, eggs, fish, chicken, soya chunks, sprouts and nuts.</p>');
   }
@@ -265,7 +277,7 @@
       d.className = 'msg ' + (m.role === 'user' ? 'user' : 'bot') + (m.level === 'red' ? ' red' : m.level === 'amber' ? ' amber' : '');
       d.textContent = m.content; box.appendChild(d);
     });
-    if (typing) { const d = document.createElement('div'); d.className = 'msg bot typing'; d.textContent = 'Thinking…'; box.appendChild(d); }
+    if (typing) { const d = document.createElement('div'); d.className = 'msg bot typing'; d.textContent = T('Thinking…'); box.appendChild(d); }
     box.scrollTop = box.scrollHeight;
     $('#askchips').hidden = st.chat.length > 0;
   }
@@ -276,7 +288,7 @@
     $('#chat-fab').hidden = !has || chatOpen; if (!has && chatOpen) closeChat(true);
     if (!has) return;
     const g = goals(), sum = sumOn(todayKey());
-    $('#d-name').textContent = (st.profile.name || 'Menu'); $('#d-sub').textContent = live ? 'Live AI' : 'Demo mode';
+    const dn = $('#d-name'); dn.textContent = st.profile.name || 'Menu'; dn.setAttribute('translate', st.profile.name ? 'no' : 'yes'); $('#d-sub').textContent = live ? 'Live AI' : 'Demo mode';
     $('#mode').textContent = live ? 'Live AI' : 'Demo mode (works offline)';
     if (view === 'home') renderHome(g, sum);
     if (view === 'track') renderTrack(g, sum);
@@ -299,17 +311,17 @@
     el.className = 'reply' + (r.safety && r.safety.level === 'red' ? ' red' : r.safety && r.safety.level === 'amber' ? ' amber' : '');
   }
   async function analyze(text, image) {
-    const now = new Date(), local = E.analyze(text, { lang: 'en', now });
+    const now = new Date(), local = E.analyze(text, { lang: LANG(), now });
     if (local.safety.level === 'red') return { ...local, source: 'safety' }; // never waits for the network
     if (live) {
       try {
         const sum = sumOn(todayKey());
         const r = await fetch('api/coach', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(16000),
-          body: JSON.stringify({ text, image, lang: 'en', now: now.toISOString(), context: { water: sum.water, walkMin: sum.walkMin } }) });
+          body: JSON.stringify({ text, image, lang: LANG(), now: now.toISOString(), context: { water: sum.water, walkMin: sum.walkMin } }) });
         if (r.ok) return await r.json();
       } catch (e) { /* offline: fall back to the local parser */ }
     }
-    if (image && !text) return { ...local, reply: 'Photo reading needs the live AI. Please type what was on the plate.' };
+    if (image && !text) return { ...local, reply: T('Photo reading needs the live AI. Please type what was on the plate.') };
     return local;
   }
   function pushEntry(o) { st.entries.push({ id: newId(), ts: Date.now(), text: '', meals: [], water: 0, walkMin: 0, steps: 0, walkSkipped: false, safety: { level: 'none', reasons: [] }, ...o }); save(); }
@@ -318,13 +330,13 @@
     text = (text || '').trim();
     if (!text && !image) return;
     const btn = $('#send'); btn.disabled = true;
-    const rep = $('#reply'); rep.hidden = false; rep.className = 'reply'; rep.textContent = 'One moment…';
+    const rep = $('#reply'); rep.hidden = false; rep.className = 'reply'; rep.textContent = T('One moment…');
     const r = await analyze(text, image);
     btn.disabled = false;
     const empty = !r.meals.length && !r.water && !r.walkMin && !r.steps && !r.walkSkipped && !r.bp && r.sugar == null && r.safety.level === 'none';
     if (!empty) withRewardCheck(() => pushEntry({ text: r.safety.level === 'red' ? '' : text, meals: r.meals, water: r.water, walkMin: r.walkMin, steps: r.steps || 0, stepsEst: !!r.stepsEst, walkSkipped: r.walkSkipped, bp: r.bp, sugar: r.sugar, safety: r.safety }));
     const after = sumOn(todayKey());
-    if (!empty && r.safety.level !== 'red' && r.meals.some((m) => !m.skipped) && after.kcalHi) r.reply += ` Today so far: about ${fmt(after.kcalLo)}–${fmt(after.kcalHi)} kcal` + (after.protHi ? ` and ${after.protLo}–${after.protHi} g protein.` : '.');
+    if (!empty && r.safety.level !== 'red' && r.meals.some((m) => !m.skipped) && after.kcalHi) r.reply += ' ' + T(`Today so far: about ${fmt(after.kcalLo)}–${fmt(after.kcalHi)} kcal` + (after.protHi ? ` and ${after.protLo}–${after.protHi} g protein.` : '.'));
     showReply(r); $('#say').value = ''; render();
   }
 
@@ -377,7 +389,7 @@
     q = (q || '').trim(); if (!q) return;
     const btn = $('#ask'); btn.disabled = true;
     const sum = sumOn(todayKey()), g = goals();
-    const ctx = { summary: { water: sum.water, walkMin: sum.walkMin, steps: sum.steps, km: sum.km, kcalLo: sum.kcalLo, kcalHi: sum.kcalHi, protLo: sum.protLo, protHi: sum.protHi, meals: sum.meals.map((m) => m.name) },
+    const ctx = { lang: LANG(), summary: { water: sum.water, walkMin: sum.walkMin, steps: sum.steps, km: sum.km, kcalLo: sum.kcalLo, kcalHi: sum.kcalHi, protLo: sum.protLo, protHi: sum.protHi, meals: sum.meals.map((m) => m.name) },
       goals: { water: g.water, walk: g.walk, steps: g.steps, km: g.km, kcal: g.kcal, protein: g.protein }, history: history().map((x) => ({ date: x.date, walkMin: x.walkMin })) };
     const prior = st.chat.slice(-6).map((m) => ({ role: m.role, content: m.content }));
     let r = E.answerQuery(q, ctx);
@@ -385,7 +397,7 @@
     const exempt = r.safety.level !== 'none' || r.topic === 'medicine';
     if (!isPrem() && !exempt) {
       if (aiUsed() >= PL.FREE.aiPerDay) {
-        st.chat.push({ role: 'user', content: q }, { role: 'assistant', content: `You have used today's ${PL.FREE.aiPerDay} free questions. They reset tomorrow, or Premium gives unlimited questions. Emergency and safety help is always free.`, level: 'amber' });
+        st.chat.push({ role: 'user', content: q }, { role: 'assistant', content: T(`You have used today's ${PL.FREE.aiPerDay} free questions. They reset tomorrow, or Premium gives unlimited questions. Emergency and safety help is always free.`), level: 'amber' });
         st.chat = st.chat.slice(-30); save(); btn.disabled = false; renderChat(); updateChatMeta(); return;
       }
       st.ai = { day: todayKey(), n: aiUsed() + 1 }; save();
@@ -393,7 +405,7 @@
     st.chat.push({ role: 'user', content: q }); renderChat(true);
     if (r.safety.level !== 'red' && r.topic !== 'medicine' && live) { // red flags and medicine never wait for the network
       try {
-        const x = await fetch('api/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(20000), body: JSON.stringify({ question: q, context: ctx, history: prior }) });
+        const x = await fetch('api/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(20000), body: JSON.stringify({ question: q, context: ctx, history: prior, lang: LANG() }) });
         if (x.ok) r = await x.json();
       } catch (e) { /* offline: keep the local answer */ }
     }
@@ -438,8 +450,8 @@
     const pro = isPrem(); $('#pro-chip').hidden = !pro;
     const t = $('#d-plan-tag'); t.textContent = pro ? 'Premium' : 'Free'; t.classList.toggle('pro', pro);
   }
-  const money = (n) => '₹' + Number(n).toLocaleString('en-IN');
-  const dateStr = (ts) => new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const money = (n) => '₹' + Number(n).toLocaleString(LOC());
+  const dateStr = (ts) => new Date(ts).toLocaleDateString(LOC(), { day: 'numeric', month: 'short', year: 'numeric' });
   function renderPlans() {
     const box = $('#plan-status'), pro = isPrem();
     box.className = 'card status' + (pro ? ' prem' : '');
@@ -453,7 +465,7 @@
     f.innerHTML = (pro ? '' : '<span class="pbadge">Your plan</span>') + '<h3>Free</h3><div class="price">₹0</div><div class="per">Free forever · no card needed</div><ul></ul><button type="button" id="plan-cancel"></button>';
     ['Food, calories, protein, water and steps tracking', 'Daily health digest and 10,000-step rewards', 'AI assistant: 5 questions a day', 'Your latest 3 saved walks on the map', 'All safety and emergency messages'].forEach((t) => { const li = document.createElement('li'); li.textContent = t; f.querySelector('ul').appendChild(li); });
     const fb = f.querySelector('button'); fb.textContent = pro ? 'Switch to Free' : '✓ This is your plan'; fb.disabled = !pro; fb.className = pro ? 'big' : 'big ghost';
-    fb.onclick = () => { if (confirm('Switch back to the Free plan? Any remaining Premium days on this phone will be removed.')) { st.plan = null; save(); render(); toast('Back on the Free plan'); } };
+    fb.onclick = () => { if (confirm(T('Switch back to the Free plan? Any remaining Premium days on this phone will be removed.'))) { st.plan = null; save(); render(); toast('Back on the Free plan'); } };
     wrap.appendChild(f);
     PL.PLANS.forEach((p) => {
       const a = document.createElement('article'); a.className = 'plan' + (p.id === best ? ' best' : '');
@@ -463,7 +475,7 @@
       a.querySelector('.per').textContent = `${money(PL.perMonth(p))} per month · ${p.months === 1 ? 'billed every month' : `${p.months} months paid at once`}`;
       const b = a.querySelector('button'); b.textContent = pro ? 'Add this plan (demo)' : 'Start Premium (demo)';
       b.onclick = () => {
-        if (!confirm(`Demo only: no payment is taken. Switch on Premium (${p.name}, ${money(p.price)}) on this phone?`)) return;
+        if (!confirm(T(`Demo only: no payment is taken. Switch on Premium (${p.name}, ${money(p.price)}) on this phone?`))) return;
         st.plan = PL.activate(st.plan, p.id); save(); toast('Premium is on (demo)'); render();
       };
       wrap.appendChild(a);
@@ -499,7 +511,7 @@
       const d = document.createElement('div'); d.className = 'redeem'; d.innerHTML = '<div><b></b><small></small></div><button type="button"></button>';
       d.querySelector('b').textContent = o.label; d.querySelector('small').textContent = `${o.cost} points`;
       const b = d.querySelector('button'); b.textContent = 'Redeem'; b.disabled = bal < o.cost;
-      b.onclick = () => { if (!confirm(`Spend ${o.cost} points on ${o.label}?`)) return; st.redeemed.push({ ts: Date.now(), cost: o.cost, label: o.label, days: o.days }); st.plan = PL.extendDays(st.plan, o.days); save(); $('#rw-msg').textContent = `Done: ${o.label} added. Premium now runs until ${dateStr(st.plan.endsTs)}.`; render(); };
+      b.onclick = () => { if (!confirm(T(`Spend ${o.cost} points on ${o.label}?`))) return; st.redeemed.push({ ts: Date.now(), cost: o.cost, label: o.label, days: o.days }); st.plan = PL.extendDays(st.plan, o.days); save(); $('#rw-msg').textContent = `Done: ${o.label} added. Premium now runs until ${dateStr(st.plan.endsTs)}.`; render(); };
       rd.appendChild(d);
     });
     if (!$('#rw-msg').textContent) $('#rw-msg').textContent = 'Points can only be spent on in-app Premium days. Nothing here has cash value.';
@@ -579,7 +591,7 @@
   function showWalk(e) {
     ensureMap(); if (map) map.invalidateSize(); drawRoute(e.route, true);
     setReadout(e.km || 0, (e.walkMin || 0) * 60, e.steps || 0);
-    $('#walk-msg').textContent = `Showing your walk from ${new Date(e.ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.`;
+    $('#walk-msg').textContent = `Showing your walk from ${new Date(e.ts).toLocaleString(LOC(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.`;
     $('#mapcard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   function renderWalk() {
@@ -591,12 +603,12 @@
     shown.forEach((e) => {
       const li = document.createElement('li'), d = document.createElement('div');
       d.innerHTML = '<div class="t"></div><div class="b"></div>';
-      d.querySelector('.t').textContent = new Date(e.ts).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      d.querySelector('.t').textContent = new Date(e.ts).toLocaleString(LOC(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
       d.querySelector('.b').textContent = `${(e.km || 0).toFixed(2)} km · ${e.walkMin} min · ${fmt(e.steps)} steps${e.hr ? ` · ♥ avg ${e.hr.avg}` : ''}${e.demo ? ' · demo' : ''}`;
       const box = document.createElement('div'); box.className = 'rowbtns';
       const m = document.createElement('button'); m.type = 'button'; m.textContent = '🗺'; m.setAttribute('aria-label', 'Show this walk on the map'); m.onclick = () => showWalk(e);
       const x = document.createElement('button'); x.type = 'button'; x.textContent = '🗑'; x.setAttribute('aria-label', 'Delete this walk');
-      x.onclick = () => { if (confirm('Delete this walk and its route?')) { st.entries = st.entries.filter((y) => y.id !== e.id); save(); render(); } };
+      x.onclick = () => { if (confirm(T('Delete this walk and its route?'))) { st.entries = st.entries.filter((y) => y.id !== e.id); save(); render(); } };
       box.append(m, x); li.append(d, box); ul.appendChild(li);
     });
     const lock = $('#walk-lock'); lock.hidden = hidden <= 0; lock.textContent = `🔒 ${hidden} older walk${hidden === 1 ? ' is' : 's are'} on Premium. See plans`;
@@ -621,13 +633,13 @@
 
   ['2 roti, dal, sabzi', 'one glass of water', '20 minute walk', 'did not walk today'].forEach((c) => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = c;
-    b.onclick = () => { const s = $('#say'); s.value = (s.value ? s.value + ', ' : '') + c; s.focus(); }; $('#chips').appendChild(b);
+    b.onclick = () => { const s = $('#say'); s.value = (s.value ? s.value + ', ' : '') + b.textContent; s.focus(); }; $('#chips').appendChild(b);
   });
   [['+1,000 steps', 1000], ['+2,000 steps', 2000], ['+1 km', Math.round(1 / E.STEP_KM)]].forEach(([label, n]) => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.onclick = () => addSteps(n); $('#stepchips').appendChild(b);
   });
   ['How am I doing today?', 'How much protein do I need?', 'How far did I walk?', 'What should I eat tonight?', 'Should I stop my tablet?'].forEach((c) => {
-    const b = document.createElement('button'); b.type = 'button'; b.textContent = c; b.onclick = () => sendChat(c); $('#askchips').appendChild(b);
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = c; b.onclick = () => sendChat(b.textContent); $('#askchips').appendChild(b);
   });
   [['steps', 'Steps'], ['water', 'Water'], ['kcal', 'Calories'], ['prot', 'Protein']].forEach(([k, label]) => {
     const b = document.createElement('button'); b.type = 'button'; b.dataset.m = k; b.textContent = label; b.onclick = () => { metric = k; render(); }; $('#metricchips').appendChild(b);
@@ -655,15 +667,15 @@
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) $('#mic').hidden = true;
   else $('#mic').onclick = () => {
-    const r = new SR(); r.lang = 'en-IN'; r.interimResults = false;
-    $('#mic').textContent = '…'; $('#reply').hidden = false; $('#reply').className = 'reply'; $('#reply').textContent = 'Listening…';
+    const r = new SR(); r.lang = I18N.lang === 'hi' ? 'hi-IN' : 'en-IN'; r.interimResults = false;
+    $('#mic').textContent = '…'; $('#reply').hidden = false; $('#reply').className = 'reply'; $('#reply').textContent = T('Listening…');
     r.onresult = (ev) => { $('#say').value = (($('#say').value ? $('#say').value + ' ' : '') + ev.results[0][0].transcript).trim(); };
     r.onend = () => { $('#mic').textContent = '🎤'; $('#reply').hidden = true; };
     r.onerror = () => { $('#mic').textContent = '🎤'; };
     r.start();
   };
   $('#photo').onclick = () => {
-    if (!live) { const el = $('#reply'); el.hidden = false; el.className = 'reply amber'; el.textContent = 'Photo reading needs the live AI. Please type what was on the plate.'; }
+    if (!live) { const el = $('#reply'); el.hidden = false; el.className = 'reply amber'; el.textContent = T('Photo reading needs the live AI. Please type what was on the plate.'); }
     else $('#file').click();
   };
   $('#file').onchange = (ev) => {
@@ -677,8 +689,8 @@
     img.src = URL.createObjectURL(f); ev.target.value = '';
   };
 
-  const share = () => { const txt = E.familySummary(st.profile.name, sumOn(todayKey()), goals(), 'en'); closeDrawer(true); window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener'); };
-  const reset = () => { closeDrawer(true); closeChat(true); if (confirm('Erase everything on this phone? This also removes saved walk routes, points and any Premium on this phone.')) { localStorage.removeItem(KEY); st = blank(); view = 'home'; $('#reply').hidden = true; render(); window.scrollTo(0, 0); } };
+  const share = () => { const txt = E.familySummary(st.profile.name, sumOn(todayKey()), goals(), LANG()); closeDrawer(true); window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener'); };
+  const reset = () => { closeDrawer(true); closeChat(true); if (confirm(T('Erase everything on this phone? This also removes saved walk routes, points and any Premium on this phone.'))) { localStorage.removeItem(KEY); st = blank(); view = 'home'; $('#reply').hidden = true; render(); window.scrollTo(0, 0); } };
   const sample = () => { closeDrawer(true); sampleWeek(); };
   $('#share').onclick = share; $('#d-share').onclick = share;
   $('#reset').onclick = reset; $('#d-reset').onclick = reset;
@@ -714,7 +726,7 @@
       col.innerHTML = '<div class="val"></div><div class="barv sleep"></div><div class="day"></div>';
       col.querySelector('.val').textContent = x.h ? x.h : '';
       col.querySelector('.barv').style.height = x.h ? Math.max(3, (x.h / 10) * AREA) + 'px' : '3px';
-      col.querySelector('.day').textContent = i === logs.length - 1 ? 'Today' : new Date(x.k.replace(/-/g, '/')).toLocaleDateString('en-IN', { weekday: 'short' }).slice(0, 3);
+      col.querySelector('.day').textContent = i === logs.length - 1 ? 'Today' : new Date(x.k.replace(/-/g, '/')).toLocaleDateString(LOC(), { weekday: 'short' }).slice(0, 3);
       box.appendChild(col);
     });
     const sl = F.avg(logs.filter((x) => x.h > 0).map((x) => x.h)); $('#sl-avg').textContent = sl == null ? '-' : sl.toFixed(1);
@@ -722,7 +734,7 @@
     const byDay = {}; st.entries.filter((e) => e.quick === 'weight' && F.validKg(e.kg)).sort((a, b) => a.ts - b.ts).forEach((e) => { byDay[E.dayKey(e.ts)] = e; });
     const pts = Object.values(byDay).slice(-30), ws = F.weightStats(pts.map((p) => ({ ts: p.ts, kg: p.kg })));
     $('#wt-now').textContent = ws ? ws.latest : (latestWeight() || '-');
-    $('#wt-sub').textContent = ws && ws.count > 1 ? `kg · ${ws.change > 0 ? '+' : ''}${ws.change.toFixed(1)} since ${new Date(pts[0].ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : 'kg';
+    $('#wt-sub').textContent = ws && ws.count > 1 ? `kg · ${ws.change > 0 ? '+' : ''}${ws.change.toFixed(1)} since ${new Date(pts[0].ts).toLocaleDateString(LOC(), { day: 'numeric', month: 'short' })}` : 'kg';
     const wc = $('#wt-chart');
     if (pts.length < 2) wc.innerHTML = '<div class="empty">Save your weight on two or more days to see the trend.</div>';
     else {
@@ -732,14 +744,14 @@
       const dots = pts.map((p) => `<circle cx="${X(p.ts).toFixed(1)}" cy="${Y(p.kg).toFixed(1)}" r="3.5" fill="#2fd46b"/>`).join('');
       wc.innerHTML = `<svg viewBox="0 0 ${W0} ${H0}" aria-hidden="true"><path d="${path}" fill="none" stroke="#2fd46b" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}<text x="${pad}" y="12" fill="#a3bbab" font-size="11">${hi.toFixed(1)}</text><text x="${pad}" y="${H0 - 2}" fill="#a3bbab" font-size="11">${lo.toFixed(1)}</text></svg>`;
     }
-    $('#wt-chart').setAttribute('aria-label', 'Weight over time: ' + pts.map((p) => p.kg + ' kg').join(', '));
+    $('#wt-chart').setAttribute('aria-label', pts.length ? 'Weight over time: ' + pts.map((p) => p.kg + ' kg').join(', ') : 'Weight over time');
   }
   function addWorkout() {
     const m = +$('#wk-min').value, a = F.ACTIVITIES.find((x) => x.id === $('#wk-act').value), msg = $('#wk-msg');
     if (!a || !F.validMinutes(m)) { msg.textContent = 'Please enter whole minutes between 1 and 300.'; return; }
     const kg = latestWeight(), burn = F.burnKcal(a.met, m, kg);
     pushEntry({ quick: 'workout', activity: a.id, activeMin: m, burn });
-    $('#wk-min').value = ''; msg.textContent = `Added ${a.label}, ${m} min: about ${burn} kcal burned (rough estimate${F.validKg(kg) ? '' : ', assuming 65 kg. Add your weight for a better figure'}).`;
+    $('#wk-min').value = ''; msg.textContent = `Added ${a.label}, ${m} min: about ${burn} kcal burned (rough estimate).` + (F.validKg(kg) ? '' : ' Assuming 65 kg: add your weight for a better figure.');
     toast('Workout added'); render();
   }
   function addSleep() {
@@ -772,7 +784,7 @@
     $('#hr-bpm').textContent = fresh ? hr.last.bpm : '--';
     $('#hr-bpm').style.color = z ? ZCOLORS[z.z] : '';
     $('#hr-zone').textContent = !connected ? 'Not connected' : z ? `${z.label} zone · ${z.pct}% of max` : 'Waiting for a reading…';
-    $('#hr-dev').textContent = connected ? (hr.name || 'Connected') : '';
+    $('#hr-dev').textContent = connected ? (hr.name || 'Connected') : ''; $('#hr-dev').setAttribute('translate', hr.demo ? 'yes' : 'no');
     $$('#zonebar i').forEach((i) => i.classList.toggle('on', !!z && +i.dataset.z === z.z));
     const adv = z ? WT.advice(z) : null, a = $('#hr-advice');
     a.hidden = !adv; if (adv) { a.textContent = adv; a.classList.toggle('stop', z.z >= 5); }
@@ -859,7 +871,7 @@
     rd.onload = () => {
       const r = F.sanitizeBackup(String(rd.result), PL.PLANS.map((p) => p.id), CM.CHALLENGES.map((c) => c.id));
       if (!r.ok) { msg.textContent = r.error; return; }
-      if (!confirm(`Replace everything on this phone with this backup (${r.state.entries.length} notes)? This cannot be undone.`)) { msg.textContent = 'Restore cancelled. Nothing was changed.'; return; }
+      if (!confirm(T(`Replace everything on this phone with this backup (${r.state.entries.length} notes)? This cannot be undone.`))) { msg.textContent = 'Restore cancelled. Nothing was changed.'; return; }
       st = r.state; save(); render(); fillProfileForm(); fillEmergency();
       msg.textContent = `Restored ${r.state.entries.length} notes.` + (r.dropped ? ` ${r.dropped} unreadable notes were skipped.` : ''); toast('Backup restored');
     };
@@ -892,7 +904,7 @@
   function openWhatsApp(text) { window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener'); }
   function shareWeek() {
     const w = myWeek();
-    if (!confirm(`This shares only your first name, your steps this week (${fmt(w.week)}), your best day (${fmt(w.best)}) and your streak (${w.streak}). No health readings, no location. Continue?`)) return;
+    if (!confirm(T(`This shares only your first name, your steps this week (${fmt(w.week)}), your best day (${fmt(w.best)}) and your streak (${w.streak}). No health readings, no location. Continue?`))) return;
     const url = myLink(), text = `Join my walking board on My Fitness Buddy! I did ${fmt(w.week)} steps this week. Open this link to add me:`;
     if (navigator.share) navigator.share({ title: 'My Fitness Buddy', text, url }).catch(() => {}); else openWhatsApp(text + ' ' + url);
     $('#cm-msg').textContent = 'Shared. Ask your friends to share theirs back.';
@@ -955,7 +967,7 @@
       const li = document.createElement('li'); if (r.you) li.className = 'you';
       li.innerHTML = '<div class="rk"></div><div class="nm"><span class="n"></span><span class="sub"></span></div><div class="wk"></div><div class="acts"></div>';
       li.querySelector('.rk').textContent = r.rank;
-      const nm = li.querySelector('.n'); nm.textContent = r.name + (r.you ? ' (you)' : '');
+      const nm = li.querySelector('.n'); nm.textContent = ''; const who = document.createElement('span'); who.setAttribute('translate', 'no'); who.textContent = r.name; nm.append(who); if (r.you) nm.append(' (you)');
       if (r.sample) { const t = document.createElement('span'); t.className = 'stag'; t.textContent = 'sample'; nm.after(t); }
       li.querySelector('.sub').textContent = r.you ? `best day ${fmt(r.best)} · ${r.streak}-day streak` : `best day ${fmt(r.best)} · ${r.streak}-day streak · shared ${CM.timeAgo(r.ts)}`;
       li.querySelector('.wk').textContent = fmt(r.week);
@@ -964,7 +976,7 @@
         const cheer = document.createElement('button'); cheer.type = 'button'; cheer.textContent = '👏 Cheer'; cheer.setAttribute('aria-label', 'Cheer ' + r.name);
         cheer.onclick = () => openWhatsApp(`Well done, ${r.name}! ${fmt(r.week)} steps this week is great. 👏 (My Fitness Buddy)`);
         const rm = document.createElement('button'); rm.type = 'button'; rm.textContent = '✕ Remove'; rm.setAttribute('aria-label', 'Remove ' + r.name);
-        rm.onclick = () => { if (confirm(`Remove ${r.name} from your board?`)) { st.friends = st.friends.filter((x) => x.id !== r.id); save(); render(); } };
+        rm.onclick = () => { if (confirm(T(`Remove ${r.name} from your board?`))) { st.friends = st.friends.filter((x) => x.id !== r.id); save(); render(); } };
         a.append(cheer, rm);
       }
       ol.appendChild(li);
@@ -996,11 +1008,11 @@
     st.groups.forEach((g) => {
       const li = document.createElement('li'), d = document.createElement('div'); d.innerHTML = '<div class="t"></div><div class="b"></div>';
       d.querySelector('.t').textContent = g.kind + (g.sample ? ' · sample' : '');
-      d.querySelector('.b').textContent = [g.name, g.when, g.where].filter(Boolean).join(' · ');
+      d.querySelector('.b').textContent = [g.name, g.when, g.where].filter(Boolean).join(' · '); if (!g.sample) d.querySelector('.b').setAttribute('translate', 'no');
       const box = document.createElement('div'); box.className = 'rowbtns';
       const sh = document.createElement('button'); sh.type = 'button'; sh.textContent = '📤'; sh.setAttribute('aria-label', 'Send an invite for ' + g.name); sh.onclick = () => openWhatsApp(groupInvite(g));
       const rm = document.createElement('button'); rm.type = 'button'; rm.textContent = '🗑'; rm.setAttribute('aria-label', 'Delete ' + g.name);
-      rm.onclick = () => { if (confirm(`Delete the group "${g.name}"?`)) { st.groups = st.groups.filter((x) => x.id !== g.id); save(); render(); } };
+      rm.onclick = () => { if (confirm(T(`Delete the group "${g.name}"?`))) { st.groups = st.groups.filter((x) => x.id !== g.id); save(); render(); } };
       box.append(sh, rm); li.append(d, box); gl.appendChild(li);
     });
     const hasSample = st.friends.some((f) => f.sample) || st.groups.some((g) => g.sample);
@@ -1047,10 +1059,25 @@
   $('#d-refresh').onclick = () => { closeDrawer(true); refresh(true); };
   document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastUpdated.getTime() > 5 * 60 * 1000) refresh(false); }); // back after a while: catch up quietly
 
+  // ---------------- language switch ----------------
+  function markLang() { $$('.langbtn').forEach((b) => b.setAttribute('aria-pressed', b.dataset.lang === I18N.lang ? 'true' : 'false')); }
+  function setLanguage(l) {
+    if (!I18N.IDS.includes(l) || l === I18N.lang) return;
+    I18N.setLang(l); try { localStorage.setItem('dinchariya.lang', l); } catch (e) {}
+    I18N.apply(); markLang(); render(); toast(T('Language changed'));
+  }
+  $$('.langbtn').forEach((b) => { b.onclick = () => setLanguage(b.dataset.lang); });
+
   // ---------------- boot ----------------
   fetch('api/coach').then((r) => (r.ok ? r.json() : { live: false })).then((j) => { live = !!j.live; render(); }).catch(() => render());
   takeIncoming();
   go('home');
+  markLang();
+  if (LANGUAGES_ENABLED) I18N.start();
+  else { // English only for now: hide every language picker
+    $$('.langpick').forEach((el) => { el.hidden = true; });
+    $$('.langrow').forEach((el) => { const box = el.classList.contains('big') ? el.closest('section.card') : el.closest('li'); (box || el).hidden = true; });
+  }
   if (st.profile && (pendingFriend || pendingErr)) go('community');
   setInterval(() => st.profile && render(), 5 * 60 * 1000); // keeps nudges and the date fresh
 })();

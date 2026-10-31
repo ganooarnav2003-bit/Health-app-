@@ -57,3 +57,6 @@ There are **no public posts and no stranger accounts**. *Community* has three pa
 - **Challenges:** four short challenges judged from your own steps, water and active minutes.
 - **My groups:** keep your own walking group or yoga class and send an invite in one tap.
 *Load sample community* shows made-up friends so you can see how it looks. A real, live community (chat, public groups, live leaderboards) would need accounts, a database and moderation, which this prototype deliberately does not have.
+
+## Languages (work in progress)
+English is the live language. **Hindi (Devanagari) and Hinglish (Hindi in Roman letters) are partly built and switched off** (`LANGUAGES_ENABLED = false` in `app.js`), so the deployed app is English only and shows no language picker. Done so far: the translation engine (`i18n.js`), every static screen, and the replies, nudges, safety messages and chat answers in all three languages (`node tests/run-lang-engine.js`). Still to do: about 400 dynamic messages and the 31 daily tips, then run `node tests/browser-i18n.js hi` and `hg` until it reports no missing translations, and have a fluent speaker review the wording. Then set the flag to `true`.

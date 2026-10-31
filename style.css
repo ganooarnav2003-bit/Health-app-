@@ -3,7 +3,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{font-size:18px;-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Devanagari","Nirmala UI","Mangal",sans-serif}
 .wrap{max-width:560px;margin:0 auto;padding:12px 14px 40px}
 .notice{background:#000;color:#cfe8d8;border-bottom:1px solid var(--pri);font-size:.8rem;line-height:1.4;padding:8px 12px;text-align:center}
 h1{font-size:clamp(1.6rem,7vw,2rem);line-height:1.2;margin:.35em 0 .4em;font-weight:750}
@@ -269,3 +269,11 @@ select{width:100%;font:inherit;padding:12px;border:2px solid var(--line);border-
 .chal .dots{display:flex;gap:6px;margin:8px 0}.chal .dots i{width:22px;height:22px;border-radius:50%;background:#26382d}.chal .dots i.hit{background:var(--pri)}.chal .dots i.miss{background:#5a2a2a}
 .communitytile{display:block;width:100%;text-align:left;font-weight:400;border-color:#1f7a45}
 .communitytile b{display:block;font-size:1.05rem;margin-bottom:2px}.communitytile span{color:var(--mut);font-size:.9rem}
+
+/* ================= Language picker ================= */
+.langpick{display:flex;gap:6px;margin:-8px 0 14px;flex-wrap:wrap}
+.langpick .langbtn{min-height:44px;padding:4px 14px;border-radius:99px;background:rgba(0,0,0,.35);border-color:rgba(255,255,255,.28);color:#fff;font-weight:600;font-size:.95rem}
+.langrow{display:flex;gap:6px;flex-wrap:wrap}.langrow .langbtn{flex:1;min-width:84px;min-height:46px;padding:4px 8px;font-size:.95rem}
+.langrow.big .langbtn{min-height:52px;font-size:1rem}
+.langbtn[aria-pressed="true"]{background:var(--pri)!important;border-color:var(--pri)!important;color:var(--priInk)!important}
+.dlist .langrow{padding:4px 2px}

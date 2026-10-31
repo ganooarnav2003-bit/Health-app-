@@ -49,6 +49,7 @@
     <li><button data-go="chat">🤖 AI assistant</button></li>
     <li><button data-go="tips">📰 Daily health digest</button></li>
     <li class="sep"></li>
+    <li><div class="langrow" role="group" aria-label="Language"><button type="button" class="langbtn" data-lang="en" translate="no">English</button><button type="button" class="langbtn" data-lang="hi" translate="no">हिन्दी</button><button type="button" class="langbtn" data-lang="hg" translate="no">Hinglish</button></div></li>
     <li><button id="d-share" type="button">📤 Share today with family</button></li>
     <li><button id="d-sample" type="button" class="soft">🧪 Load sample week (made-up)</button></li>
     <li><button id="d-reset" type="button" class="soft">🗑 Erase all my notes</button></li>
@@ -60,6 +61,7 @@
   <!-- Onboarding: the first two minutes -->
   <section id="onboard" class="welcome" hidden>
     <div class="hero">
+      <div class="langpick" role="group" aria-label="Language"><button type="button" class="langbtn" data-lang="en" translate="no">English</button><button type="button" class="langbtn" data-lang="hi" translate="no">हिन्दी</button><button type="button" class="langbtn" data-lang="hg" translate="no">Hinglish</button></div>
       <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#000" stroke="#2fd46b" stroke-width="2"/><path d="M24 37s-11-6.6-11-15a6.3 6.3 0 0 1 11-4.2A6.3 6.3 0 0 1 35 22c0 8.4-11 15-11 15z" fill="#2fd46b"/><path d="M14 25h6l2-4 3 7 2-3h7" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <div class="brand">My Fitness Buddy</div>
       <h1 data-t="onb_h">Your day, in your own words.</h1>
@@ -145,7 +147,7 @@
           <button id="send" class="big primary">Log it</button>
         </div>
         <input type="file" id="file" accept="image/*" capture="environment" hidden>
-        <div id="reply" class="reply" hidden aria-live="polite"></div>
+        <div id="reply" class="reply" hidden aria-live="polite" translate="no"></div>
       </section>
 
       <section class="card" id="kcalcard" aria-labelledby="h-kcal">
@@ -237,7 +239,7 @@
       <h1 class="vtitle">Walk map</h1>
       <section class="card" id="mapcard" aria-labelledby="h-map">
         <h2 id="h-map">🗺 Track a walk</h2>
-        <div id="map" class="map" aria-label="Map of your walk"></div>
+        <div id="map" class="map" aria-label="Map of your walk" translate="no"></div>
         <p class="why" id="map-note"></p>
         <div class="stats3">
           <div><span class="v" id="m-km">0.00</span><span class="k">km</span></div>
@@ -397,6 +399,10 @@
     <!-- ME -->
     <section id="v-me" class="view" data-view="me" hidden>
       <h1 class="vtitle">Me</h1>
+      <section class="card" aria-labelledby="h-lang">
+        <h2 id="h-lang">🌐 Language</h2>
+        <div class="langrow big" role="group" aria-label="Language"><button type="button" class="langbtn" data-lang="en" translate="no">English</button><button type="button" class="langbtn" data-lang="hi" translate="no">हिन्दी</button><button type="button" class="langbtn" data-lang="hg" translate="no">Hinglish</button></div>
+      </section>
       <section class="card" id="profilecard" aria-labelledby="h-prof">
         <h2 id="h-prof">Personal data</h2>
         <p class="muted">Used only to work out your protein range and a calorie reference. Stored on this phone.</p>
@@ -478,7 +484,7 @@
     <button id="chat-clear" class="ghost mini" type="button">Clear</button>
     <button id="chat-close" class="mini" type="button" aria-label="Close assistant">✕</button>
   </header>
-  <div id="chatlog" class="chatlog" role="log" aria-live="polite"></div>
+  <div id="chatlog" class="chatlog" role="log" aria-live="polite" translate="no"></div>
   <div class="chips" id="askchips"></div>
   <button id="chat-upsell" class="ghost" data-go="plans" type="button" hidden>See Premium plans</button>
   <form id="chatform" class="row cpform" autocomplete="off">
@@ -489,6 +495,11 @@
 </section>
 
 <script src="vendor/leaflet/leaflet.js"></script>
+<script src="i18n.js"></script>
+<script src="lang/ui1.js"></script>
+<script src="lang/ui2.js"></script>
+<script src="lang/ui3.js"></script>
+<script src="lang/meta.js"></script>
 <script src="engine.js"></script>
 <script src="tips.js"></script>
 <script src="walk.js"></script>
