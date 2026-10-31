@@ -23,6 +23,7 @@ function check(c, r) {
   if (e.water != null && r.water !== e.water) bad.push(`water ${r.water}!=${e.water}`);
   if (e.walkMin != null && r.walkMin !== e.walkMin) bad.push(`walk ${r.walkMin}!=${e.walkMin}`);
   if (e.walkSkipped != null && !!r.walkSkipped !== e.walkSkipped) bad.push('walkSkipped');
+  if (e.km != null && !(Math.abs((r.km || 0) - e.km) <= 0.05)) bad.push(`km ${r.km}!=${e.km}`);
   if (e.clarify && !r.clarify) bad.push('no clarifying question');
   if (e.bp && !(r.bp && r.bp.s === e.bp[0] && r.bp.d === e.bp[1])) bad.push('bp not read');
   if (e.sugar != null && r.sugar !== e.sugar) bad.push('sugar not read');

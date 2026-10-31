@@ -1,8 +1,9 @@
 // node tests/run-ask.js   -> demo answerer + a mocked run of the live agent's tool loop (no key needed)
 const E = require('../engine.js');
-const ctx = { summary: { water: 2, walkMin: 10, kcalLo: 240, kcalHi: 350, meals: ['roti', 'dal'] }, goals: { water: 6, walk: 15 }, history: [{ date: '2026-10-29', walkMin: 5 }] };
+const ctx = { summary: { water: 2, walkMin: 10, steps: 1000, km: 0.7, kcalLo: 240, kcalHi: 350, meals: ['roti', 'dal'] }, goals: { water: 6, walk: 15, steps: 1500, km: 1.05 }, history: [{ date: '2026-10-29', walkMin: 5 }] };
 const cases = [
   ['How am I doing today?', (r) => /water 2 of 6/.test(r.answer) && /10 of 15/.test(r.answer)],
+  ['How far did I walk today?', (r) => r.topic === 'distance' && /1000 steps/.test(r.answer) && /0\.7 km/.test(r.answer)],
   ['how much water should I drink', (r) => /6-8 glasses/.test(r.answer) && /doctor/.test(r.answer)],
   ['should I stop my tablet?', (r) => r.topic === 'medicine' && /cannot advise on medicines/.test(r.answer)],
   ['I have chest pain, what should I eat', (r) => r.safety.level === 'red' && /112/.test(r.answer)],

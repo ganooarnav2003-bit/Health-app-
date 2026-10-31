@@ -18,7 +18,7 @@ HARD RULES (never break):
 
 JSON schema:
 {"meals":[{"name":str,"qty":number,"unit":str,"kcal_lo":number,"kcal_hi":number,"slot":"breakfast|lunch|snack|dinner","confidence":"high|medium|low","skipped":bool,"assumed":bool}],
- "water_glasses":number,"walk_min":number,"steps":number,"walk_skipped":bool,
+ "water_glasses":number,"walk_min":number,"steps":number,"distance_km":number,"walk_skipped":bool,
  "symptoms":[str],"urgent":bool,"clarify":str|null,"reply":str}`;
 
 function pickJSON(s) {

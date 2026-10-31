@@ -60,6 +60,10 @@
   const NEG = new Set(['nahi', 'nahin', 'nhi', 'nai', 'not', 'no', "didn't", 'didnt', 'skip', 'skipped', 'नहीं', 'नही']);
   const MEAL_ACTION = /(khay|khaa|kha |kha$|ate|eaten|had|piya|pi |liya|खाय|खाई|खाया|पिया|ली)/;
 
+  const STEP_KM = 0.0007;      // ~0.7 m per step (typical for older adults; approximate)
+  const STEPS_PER_MIN = 100;   // easy walking pace
+  const kmFromSteps = (n) => Math.round((n || 0) * STEP_KM * 100) / 100;
+
   const T = (s) =>
     s.toLowerCase().split(/[^\p{L}\p{N}\p{M}'\/.]+/u).map((x) => x.replace(/^\.+|\.+$/g, '')).filter(Boolean);
 
@@ -207,7 +211,7 @@
   function parse(raw, hour) {
     const text = String(raw || '');
     const clauses = text.toLowerCase().split(/[,.;\n]|\baur\b|\band\b|\bphir\b|\bthen\b|और/);
-    const out = { meals: [], water: 0, walkMin: 0, steps: 0, walkSkipped: false, unknown: [] };
+    const out = { meals: [], water: 0, walkMin: 0, steps: 0, kmSaid: 0, stepsEst: false, walkSkipped: false, unknown: [] };
     let slot = null;
     clauses.forEach((c) => {
       const tokens = T(c);
@@ -254,6 +258,8 @@
           else if (h) mins = (NUM[h[1]] != null ? NUM[h[1]] : +h[1]) * 60;
           const st = c.match(/(\d{3,6})\s*(steps?|kadam|क़दम|कदम)/);
           if (st) out.steps += +st[1];
+          const kmm = c.match(/(\d+(?:\.\d+)?)\s*(km|kms|kilometers?|kilometres?)\b/);
+          if (kmm) out.kmSaid += +kmm[1];
           out.walkMin += mins;
           if (!mins && !st) out.walkMin += 0;
         }
@@ -262,7 +268,9 @@
         if (st) out.steps += +st[1];
       }
     });
-    if (out.steps && !out.walkMin) out.walkMin = Math.round(out.steps / 100); // ~100 steps/min
+    if (out.kmSaid && !out.steps) out.steps = Math.round(out.kmSaid / STEP_KM);
+    if (!out.steps && out.walkMin) { out.steps = Math.round(out.walkMin * STEPS_PER_MIN); out.stepsEst = true; }
+    if (out.steps && !out.walkMin) out.walkMin = Math.round(out.steps / STEPS_PER_MIN);
     out.meals = out.meals.filter((m, i, a) => !(m.name === 'chai' && a.findIndex((x) => x.name === 'chai' && x.slot === m.slot) !== i));
     return out;
   }
@@ -276,10 +284,11 @@
   }
 
   function summarize(entries) {
-    const s = { water: 0, walkMin: 0, walkSkipped: false, kcalLo: 0, kcalHi: 0, meals: [], slots: new Set(), flags: [], bp: null, sugar: null, entries: entries.length };
+    const s = { water: 0, walkMin: 0, steps: 0, km: 0, walkSkipped: false, kcalLo: 0, kcalHi: 0, meals: [], slots: new Set(), flags: [], bp: null, sugar: null, entries: entries.length };
     entries.forEach((e) => {
       s.water += e.water || 0;
       s.walkMin += e.walkMin || 0;
+      s.steps += e.steps || 0;
       if (e.walkSkipped) s.walkSkipped = true;
       (e.meals || []).forEach((m) => {
         if (m.skipped) return;
@@ -289,6 +298,8 @@
       if (e.bp) s.bp = e.bp;
       if (e.sugar != null) s.sugar = e.sugar;
     });
+    s.water = Math.max(0, s.water);
+    s.km = kmFromSteps(s.steps);
     return s;
   }
 
@@ -360,7 +371,7 @@
     const safety = assessSafety(text);
     const res = {
       source: 'demo',
-      meals: p.meals, water: Math.min(p.water, 20), walkMin: Math.min(Math.round(p.walkMin), 300), steps: p.steps, walkSkipped: p.walkSkipped,
+      meals: p.meals, water: Math.min(p.water, 20), walkMin: Math.min(Math.round(p.walkMin), 300), steps: Math.min(Math.round(p.steps), 40000), km: kmFromSteps(Math.min(p.steps, 40000)), stepsEst: p.stepsEst, walkSkipped: p.walkSkipped,
       bp: safety.readings.bp, sugar: safety.readings.sugar,
       safety: { level: safety.level, kind: safety.kind, reasons: safety.reasons },
       clarify: null, reply: '',
@@ -376,7 +387,7 @@
       logged.push(eaten.map((m) => fmtMeal(m, lang)).join(', ') + ` (~${lo}-${hi} kcal)`);
     }
     if (p.water) logged.push(lang === 'en' ? `${p.water} ${p.water === 1 ? 'glass' : 'glasses'} of water` : `${p.water} glass ${L.water[lang]}`);
-    if (p.walkMin) logged.push(`${L.walk[lang]} ${Math.round(p.walkMin)} ${L.min[lang]}`);
+    if (p.walkMin || p.steps) logged.push(`walk ${Math.round(p.walkMin)} min, ${res.steps} steps, ~${res.km} km${p.stepsEst ? ' (estimated)' : ''}`);
     if (res.bp) logged.push(`BP ${res.bp.s}/${res.bp.d}`);
     if (res.sugar != null) logged.push(`sugar ${res.sugar}`);
     if (logged.length) parts.push(`${L.logged[lang]}: ${logged.join('; ')}.`);
@@ -416,8 +427,13 @@
     if (sm) reply = (level === 'red' ? sm : (reply + ' ' + sm).trim());
     const clarify = typeof obj.clarify === 'string' && obj.clarify ? obj.clarify.slice(0, 160) : null;
     if (clarify && !reply.includes(clarify) && level !== 'red') reply = (reply + ' ' + clarify).trim();
+    let steps = Math.round(clamp(obj.steps, 0, 40000));
+    const wm = Math.round(clamp(obj.walk_min, 0, 300));
+    let stepsEst = false;
+    if (!steps && clamp(obj.distance_km, 0, 40) > 0) steps = Math.round(clamp(obj.distance_km, 0, 40) / STEP_KM);
+    if (!steps && wm) { steps = wm * STEPS_PER_MIN; stepsEst = true; }
     const out = {
-      source: 'ai', meals, water: clamp(obj.water_glasses, 0, 20), walkMin: Math.round(clamp(obj.walk_min, 0, 300)), steps: Math.round(clamp(obj.steps, 0, 40000)),
+      source: 'ai', meals, water: clamp(obj.water_glasses, 0, 20), walkMin: wm || Math.round(steps / STEPS_PER_MIN), steps, km: kmFromSteps(steps), stepsEst,
       walkSkipped: !!obj.walk_skipped,
       bp: det.readings.bp, sugar: det.readings.sugar, safety, clarify, reply, guardrailHit,
     };
@@ -434,7 +450,7 @@
   function answerQuery(question, ctx) {
     ctx = ctx || {};
     const q = String(question || '').toLowerCase();
-    const s = ctx.summary || { water: 0, walkMin: 0, kcalLo: 0, kcalHi: 0, meals: [] };
+    const s = ctx.summary || { water: 0, walkMin: 0, steps: 0, km: 0, kcalLo: 0, kcalHi: 0, meals: [] };
     const g = ctx.goals || { water: 6, walk: 20 };
     const safety = assessSafety(q);
     const sm = safetyMessage(safety, 'en');
@@ -444,7 +460,10 @@
     else if (/(how am i|how('s| is) my day|my progress|today.*(summary|so far)|so far today|how much have i)/.test(q)) {
       topic = 'today';
       const food = s.kcalHi ? ` Food so far is roughly ${s.kcalLo}-${s.kcalHi} kcal.` : ' No food logged yet.';
-      a = `Today: water ${s.water} of ${g.water} glasses, walking ${s.walkMin} of ${g.walk} minutes.${food}`;
+      a = `Today: water ${s.water} of ${g.water} glasses, walking ${s.walkMin} of ${g.walk} minutes (${s.steps || 0} steps, ${s.km || 0} km).${food}`;
+    } else if (/(how far|\bkm\b|kilomet|distance|\bsteps?\b|step count)/.test(q)) {
+      topic = 'distance';
+      a = `You have walked ${s.steps || 0} steps today, about ${s.km || 0} km. Distance is estimated from steps at roughly 0.7 m per step. Your goal today is ${g.steps || g.walk * STEPS_PER_MIN} steps.`;
     } else if (/(water|hydrat|thirst|how much.*drink)/.test(q)) {
       topic = 'water';
       a = `Many adults aim for about ${g.water}-8 glasses a day, more in hot weather. You are at ${s.water} today. If your doctor has limited your fluids, follow your doctor.`;
@@ -478,8 +497,8 @@
     const kcal = sum.kcalHi ? `${sum.kcalLo}-${sum.kcalHi} kcal (rough)` : '-';
     const flag = sum.flags.length ? (lang === 'hi' ? '\nDhyaan: kuch symptoms note kiye gaye, doctor ko batana hai.' : '\nNote: symptoms were logged, please check with the doctor.') : '';
     if (lang === 'hi') return `${n} ka din:\nPaani: ${sum.water}/${goals.water} glass\nWalk: ${sum.walkMin}/${goals.walk} min\nKhana: ${sum.meals.length} items, ${kcal}${flag}\n(Dinchariya app - medical salah nahi)`;
-    return `${n}'s day:\nWater: ${sum.water}/${goals.water} glasses\nWalk: ${sum.walkMin}/${goals.walk} min\nFood: ${sum.meals.length} items, ${kcal}${flag}\n(Dinchariya app - not medical advice)`;
+    return `${n}'s day:\nWater: ${sum.water}/${goals.water} glasses\nWalk: ${sum.walkMin}/${goals.walk} min, ${sum.steps} steps, ${sum.km} km\nFood: ${sum.meals.length} items, ${kcal}${flag}\n(Dinchariya app - not medical advice)`;
   }
 
-  return { answerQuery, parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };
+  return { kmFromSteps, STEP_KM, STEPS_PER_MIN, answerQuery, parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };
 });

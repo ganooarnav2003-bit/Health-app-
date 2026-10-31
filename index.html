@@ -41,47 +41,73 @@
 
     <article id="nudge" class="card nudge" aria-live="polite"></article>
 
-    <section class="tiles" aria-label="Today">
-      <div class="tile"><div class="k" data-t="water">Water</div><div class="v" id="t-water"></div><div class="bar"><i id="b-water"></i></div></div>
-      <div class="tile"><div class="k" data-t="walk">Walk</div><div class="v" id="t-walk"></div><div class="bar"><i id="b-walk"></i></div><div class="why" id="walk-why"></div></div>
-      <div class="tile"><div class="k" data-t="food">Food</div><div class="v" id="t-food"></div><div class="why" data-t="rough">rough estimate</div></div>
-    </section>
-
-    <section class="card">
-      <label for="say" id="say-label" data-t="say">What did you eat, drink or do today? Just say it.</label>
+    <section class="card" aria-labelledby="h-log">
+      <h2 id="h-log">Tell me about your day</h2>
       <div class="chips" id="chips"></div>
-      <textarea id="say" rows="3" placeholder=""></textarea>
+      <label class="sr" for="say">What did you eat, drink or do today?</label>
+      <textarea id="say" rows="3" placeholder="e.g. 2 roti, dal, 1 glass water, 15 min walk"></textarea>
       <div class="row">
         <button id="mic" class="big" aria-label="Speak">🎤</button>
         <button id="photo" class="big" aria-label="Photo of plate">📷</button>
-        <button id="send" class="big primary" data-t="send">Log it</button>
+        <button id="send" class="big primary">Log it</button>
       </div>
       <input type="file" id="file" accept="image/*" capture="environment" hidden>
       <div id="reply" class="reply" hidden aria-live="polite"></div>
     </section>
 
-    <section class="card" id="askcard">
-      <h2>Ask a question</h2>
-      <div class="chips" id="askchips"></div>
+    <section class="card" id="watercard" aria-labelledby="h-water">
+      <div class="thead"><h2 id="h-water">💧 Water</h2><div class="stat"><span class="v" id="w-val"></span><span class="k" id="w-sub"></span></div></div>
+      <div class="glasses" id="glasses" aria-hidden="true"></div>
+      <div class="bar"><i id="b-water"></i></div>
       <div class="row">
-        <input id="q" maxlength="300" placeholder="e.g. How am I doing today?" aria-label="Your question" autocomplete="off">
-        <button id="ask" class="big primary">Ask</button>
+        <button id="w-minus" aria-label="Remove one glass">−</button>
+        <button id="w-plus" class="primary">+ 1 glass</button>
+        <button id="w-bottle">+ Bottle</button>
       </div>
-      <div id="answer" class="reply" hidden aria-live="polite"></div>
+      <p class="why">1 glass = 250 ml, a bottle = 3 glasses. If your doctor has limited your fluids, follow your doctor, not this goal.</p>
+    </section>
+
+    <section class="card" id="walkcard" aria-labelledby="h-walk">
+      <div class="thead"><h2 id="h-walk">🚶 Walking</h2></div>
+      <div class="stats3">
+        <div><span class="v" id="s-steps"></span><span class="k">steps</span></div>
+        <div><span class="v" id="s-km"></span><span class="k">km</span></div>
+        <div><span class="v" id="s-min"></span><span class="k">minutes</span></div>
+      </div>
+      <div class="bar"><i id="b-steps"></i></div>
+      <p class="why" id="walk-why"></p>
+      <div class="chips" id="stepchips"></div>
+      <div class="row">
+        <input id="steps-in" type="number" inputmode="numeric" min="1" max="40000" placeholder="Steps to add" aria-label="Steps to add">
+        <button id="steps-add" class="primary big">Add</button>
+      </div>
+      <p class="why">Distance is estimated from steps (about 0.7 m per step), so treat it as approximate.</p>
+    </section>
+
+    <section class="card" id="chatcard" aria-labelledby="h-chat">
+      <div class="thead"><h2 id="h-chat">🤖 Ask the assistant</h2><button id="chat-clear" class="ghost mini" type="button">Clear</button></div>
+      <div id="chatlog" class="chatlog" role="log" aria-live="polite"></div>
+      <div class="chips" id="askchips"></div>
+      <form id="chatform" class="row" autocomplete="off">
+        <input id="q" maxlength="300" placeholder="Ask a question…" aria-label="Your question">
+        <button class="primary big" id="ask" type="submit">Send</button>
+      </form>
+      <p class="why">General information only, not medical advice. It will not diagnose or discuss medicines.</p>
     </section>
 
     <section class="card">
-      <h2 data-t="today">Today's notes</h2>
+      <h2>Today's notes</h2>
+      <p class="muted" id="foodline"></p>
       <ul id="log" class="log"></ul>
-      <p id="empty" class="muted" data-t="empty">Nothing yet.</p>
+      <p id="empty" class="muted">Nothing yet.</p>
     </section>
 
     <section class="actions">
-      <button id="share" data-t="share">Share today with family (WhatsApp)</button>
-      <button id="sample" class="ghost" data-t="sample">Load sample week (made-up)</button>
-      <button id="reset" class="ghost" data-t="reset">Erase all my notes</button>
+      <button id="share">Share today with family (WhatsApp)</button>
+      <button id="sample" class="ghost">Load sample week (made-up)</button>
+      <button id="reset" class="ghost">Erase all my notes</button>
     </section>
-    <p class="tiny"><span id="mode"></span> · <span data-t="water_note">If your doctor has limited your fluids, follow the doctor, not this goal.</span></p>
+    <p class="why"><span id="mode"></span></p>
   </section>
 </main>
 <script src="engine.js"></script>
