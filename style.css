@@ -175,7 +175,7 @@ select{width:100%;font:inherit;padding:12px;border:2px solid var(--line);border-
 .cptitle{flex:1;min-width:0}.cptitle h2{margin:0;font-size:1.05rem;line-height:1.2}.cpsub{display:block;font-size:.8rem;color:var(--mut);line-height:1.3}
 .chatpanel .chatlog{flex:1;max-height:none;min-height:0}
 .chatpanel .chatlog:empty{display:flex;flex:1}
-.chatpanel .chatlog:empty::before{content:"Hi! I can read your day and answer simple questions about water, steps, food and protein.";color:var(--mut);padding:10px;font-size:.95rem}
+.chatpanel .chatlog:empty::before{content:"Hi, I'm Pep! I can read your day and answer simple questions about water, steps, food and protein.";color:var(--mut);padding:10px;font-size:.95rem}
 .chatpanel .chips{margin:4px 0}.chatpanel .chips button{min-height:40px}
 .cpform{margin-top:4px}
 .msg.bot{position:relative}
@@ -213,3 +213,5 @@ select{width:100%;font:inherit;padding:12px;border:2px solid var(--line);border-
 .freebadge{display:inline-block;margin:0 0 8px;padding:4px 12px;border-radius:99px;background:#0b2415;border:1px solid #1f7a45;color:var(--pri);font-weight:700;font-size:.9rem}
 .plan.free{border-color:#1f7a45}.plan.free.current{background:#0b1f14}
 .plan ul{margin:2px 0 4px;padding-left:1.1em;color:var(--mut);font-size:.95rem}
+
+.cptitle h2 .role{display:block;font-size:.8rem;font-weight:500;color:var(--mut);white-space:normal}

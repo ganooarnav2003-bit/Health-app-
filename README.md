@@ -1,4 +1,4 @@
-# Dinchariya: a daily health check-in you can just talk to
+# My Fitness Buddy: a daily health check-in you can just talk to
 
 **Live app:** `TODO: paste your deployed link here` (Vercel = live AI + demo fallback; GitHub Pages = demo mode only)
 

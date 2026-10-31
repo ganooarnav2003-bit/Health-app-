@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const E = window.HealthEngine, TP = window.HealthTips, W = window.HealthWalk, PL = window.HealthPlans;
-  const KEY = 'dinchariya.v1';
+  const KEY = 'dinchariya.v1'; // storage key kept from the first version so saved notes survive the rename
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const GLASS_ML = 250;
@@ -412,7 +412,7 @@
   function updateChatMeta() {
     const left = Math.max(0, PL.FREE.aiPerDay - aiUsed());
     const t = $('#cp-sub'); if (!t) return;
-    t.textContent = 'AI health assistant · ' + (live ? 'Live AI' : 'Demo mode') + (isPrem() ? ' · Premium' : ` · ${left} of ${PL.FREE.aiPerDay} free questions left today`);
+    t.textContent = (live ? 'Live AI' : 'Demo mode') + (isPrem() ? ' · Premium' : ` · ${left}/${PL.FREE.aiPerDay} free today`);
     $('#chat-upsell').hidden = isPrem() || left > 0;
   }
   function renderPro() {

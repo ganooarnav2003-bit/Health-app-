@@ -1,4 +1,4 @@
-# Dinchariya: report (MAI-594 individual project)
+# My Fitness Buddy: report (MAI-594 individual project)
 
 > **Status of this draft.** Q3, Q4 and the build parts of Q5 are written from the actual code and test runs. **Q1, Q2 (evidence), and the Q5 user test need real people and real reviews; they are marked `TODO` and must be completed by the student, not invented.** Word count must stay within 2,500 (excluding tables).
 
@@ -78,7 +78,7 @@
 | F05 | Progress tracker | **Build now** (water/walk/food tiles) | Fasting tracker, supplements and reward points: **Never** (selling products to patients is a conflict of interest) |
 | F06 | Sleep tracking | **Later** | Not in the customer's doctor's advice; adds input burden |
 | F07 | Challenges, motivational videos | **Never** | Licensing (D09), and streak pressure is a known churn/guilt cause |
-| F08 | AI health coach chatbot | **Build now, reshaped** | A floating bot button on the left of every screen opens "Dina", a short-answer assistant that reads the user's own day; it is not an open chat, never diagnoses, and sends emergencies to 112 |
+| F08 | AI health coach chatbot | **Build now, reshaped** | A floating bot button on the left of every screen opens "Pep", the AI assistant, a short-answer assistant that reads the user's own day; it is not an open chat, never diagnoses, and sends emergencies to 112 |
 | F09 | Catch-up planning | **Build now, softened** | Missed walk shrinks tomorrow's goal instead of punishing |
 | F10 | Reports | **Build now (minimal)** | One-tap WhatsApp daily summary instead of PDFs |
 | F11 | Wearables | **Later** | D05 clunky; her phone and her voice suffice |

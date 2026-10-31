@@ -1,5 +1,5 @@
 /*
- * Dinchariya engine: shared by the browser (demo mode) and the serverless
+ * My Fitness Buddy engine: shared by the browser (demo mode) and the serverless
  * function (safety layer + output validation for live AI).
  *
  * Everything health-critical here is plain deterministic code, NOT an LLM:
@@ -586,8 +586,8 @@
     const n = name || (lang === 'hi' ? 'Aaj' : 'Today');
     const kcal = sum.kcalHi ? `${sum.kcalLo}-${sum.kcalHi} kcal (rough)` : '-';
     const flag = sum.flags.length ? (lang === 'hi' ? '\nDhyaan: kuch symptoms note kiye gaye, doctor ko batana hai.' : '\nNote: symptoms were logged, please check with the doctor.') : '';
-    if (lang === 'hi') return `${n} ka din:\nPaani: ${sum.water}/${goals.water} glass\nWalk: ${sum.walkMin}/${goals.walk} min\nKhana: ${sum.meals.length} items, ${kcal}${flag}\n(Dinchariya app - medical salah nahi)`;
-    return `${n}'s day:\nWater: ${sum.water}/${goals.water} glasses\nWalk: ${sum.walkMin}/${goals.walk} min, ${sum.steps} steps, ${sum.km} km\nFood: ${sum.meals.length} items, ${kcal}${sum.protHi ? `\nProtein: about ${sum.protLo}-${sum.protHi} g (rough)` : ''}${flag}\n(Dinchariya app - not medical advice)`;
+    if (lang === 'hi') return `${n} ka din:\nPaani: ${sum.water}/${goals.water} glass\nWalk: ${sum.walkMin}/${goals.walk} min\nKhana: ${sum.meals.length} items, ${kcal}${flag}\n(My Fitness Buddy - medical salah nahi)`;
+    return `${n}'s day:\nWater: ${sum.water}/${goals.water} glasses\nWalk: ${sum.walkMin}/${goals.walk} min, ${sum.steps} steps, ${sum.km} km\nFood: ${sum.meals.length} items, ${kcal}${sum.protHi ? `\nProtein: about ${sum.protLo}-${sum.protHi} g (rough)` : ''}${flag}\n(My Fitness Buddy - not medical advice)`;
   }
 
   return { proteinTarget, kcalReference, SLOTS, kmFromSteps, STEP_KM, STEPS_PER_MIN, answerQuery, parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };

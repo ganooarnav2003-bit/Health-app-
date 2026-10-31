@@ -6,7 +6,7 @@ const E = require('../engine.js');
 
 const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-5-5';
 
-const SYSTEM = `You are the logging assistant inside "Dinchariya", a daily health-habit app for Indian adults aged 60+ who speak English, Hindi or Hinglish.
+const SYSTEM = `You are the logging assistant inside "My Fitness Buddy", a daily health-habit app for Indian adults aged 60+ who speak English, Hindi or Hinglish.
 Your job: turn what the person says (or a photo of their plate) into a structured log, and write ONE short, warm reply.
 
 HARD RULES (never break):
