@@ -375,7 +375,7 @@
       const lo = eaten.reduce((a, m) => a + m.kcalLo, 0), hi = eaten.reduce((a, m) => a + m.kcalHi, 0);
       logged.push(eaten.map((m) => fmtMeal(m, lang)).join(', ') + ` (~${lo}-${hi} kcal)`);
     }
-    if (p.water) logged.push(`${p.water} ${L.glass[lang]} ${L.water[lang]}`);
+    if (p.water) logged.push(lang === 'en' ? `${p.water} ${p.water === 1 ? 'glass' : 'glasses'} of water` : `${p.water} glass ${L.water[lang]}`);
     if (p.walkMin) logged.push(`${L.walk[lang]} ${Math.round(p.walkMin)} ${L.min[lang]}`);
     if (res.bp) logged.push(`BP ${res.bp.s}/${res.bp.d}`);
     if (res.sugar != null) logged.push(`sugar ${res.sugar}`);

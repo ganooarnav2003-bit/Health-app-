@@ -26,7 +26,7 @@
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)) || { profile: null, entries: [] }; } catch (e) { return { profile: null, entries: [] }; } }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
-  const lang = () => (st.profile && st.profile.lang) || st.pendingLang || 'hi';
+  const lang = () => (st.profile && st.profile.lang) || st.pendingLang || 'en';
   const todayKey = () => E.dayKey(new Date());
   const entriesOn = (k) => st.entries.filter((e) => E.dayKey(e.ts) === k);
 
@@ -140,7 +140,7 @@
     if (st.profile) { st.profile.lang = b.dataset.lang; save(); } else st.pendingLang = b.dataset.lang;
     render();
   }));
-  $('#start').onclick = () => { st.profile = { name: $('#name').value.trim(), lang: st.pendingLang || 'hi' }; delete st.pendingLang; save(); render(); $('#say').focus(); };
+  $('#start').onclick = () => { st.profile = { name: $('#name').value.trim(), lang: st.pendingLang || 'en' }; delete st.pendingLang; save(); render(); $('#say').focus(); };
   $('#send').onclick = () => submit($('#say').value);
   $('#say').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit($('#say').value); });
 
