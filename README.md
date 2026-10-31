@@ -11,9 +11,10 @@ Say your day in plain English ("2 roti, dal, ek glass paani, 15 min walk"). The 
 |---|---|
 | `index.html`, `style.css`, `app.js` | Mobile-first UI (large type, voice input, photo input) |
 | `engine.js` | Shared logic: Hinglish/Devanagari parser (demo mode), **deterministic safety layer**, AI-output validation, adaptive goal, nudges |
+| `tips.js` | Curated Daily Health Digest (31 general tips, picked per day and per user's gaps) |
 | `api/ask.js` | Question-answering agent: Claude with 3 tools that read a snapshot of the user's day; red flags and medicine questions never reach the model |
 | `api/coach.js` | Vercel function calling the Claude API. Key is read from env, never stored in the repo |
-| `tests/` | 19 realistic inputs; `node tests/run-ask.js` tests the question agent; `node tests/run-tests.js` (demo) or `--url <live>/api/coach` (live AI) |
+| `tests/` | 20 realistic inputs; `node tests/run-ask.js` tests the question agent; `node tests/run-profile.js` tests protein/calorie maths and the tips library; `node tests/run-tests.js` (demo) or `--url <live>/api/coach` (live AI) |
 | `REPORT.md` | Answers to Q1-Q5 |
 
 ## Run locally

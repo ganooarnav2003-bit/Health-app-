@@ -71,6 +71,12 @@
     // A whole thali is too varied to guess: counted but flagged low-confidence.
     { name: 'thali', al: ['thali', 'थाली'], unit: 'plate', kcal: [600, 900], lowConf: true },
   ];
+  // grams of protein per unit (typical home portion; approximate ranges)
+  const PROT = { roti: [2.5, 3.5], paratha: [4, 6], naan: [6, 9], rice: [2.5, 4], dal: [6, 9], sabzi: [1.5, 3], khichdi: [5, 8], idli: [1.5, 2.5], dosa: [2.5, 4], sambar: [3, 5], poha: [3, 5], upma: [4, 6],
+    curd: [3, 5], 'paneer dish': [10, 16], egg: [6, 7], 'chicken curry': [18, 26], fruit: [0.5, 1.5], chai: [1, 3], biscuit: [0.3, 0.8], samosa: [4, 6], mithai: [2, 4], thali: [18, 30], pizza: [9, 13],
+    burger: [12, 25], sandwich: [6, 12], bread: [2.5, 4], puri: [2, 3], bhatura: [6, 8], chole: [9, 13], rajma: [9, 13], biryani: [12, 22], pulao: [4, 7], dhokla: [1.5, 3], vada: [4, 7], milk: [7, 9],
+    lassi: [3, 7], juice: [0.5, 1.5], oats: [5, 9], salad: [1, 3], soup: [2, 5], nuts: [4, 7], kheer: [4, 7] };
+  FOODS.forEach((f) => { f.prot = PROT[f.name] || [0, 0]; });
   const FOOD_BY_ALIAS = {};
   FOODS.forEach((f) => f.al.forEach((a) => (FOOD_BY_ALIAS[a] = f)));
 
@@ -241,6 +247,9 @@
       tokens.forEach((t, i) => {
         // foods
         const f = FOOD_BY_ALIAS[t];
+        // "aloo sabzi", "bhindi sabzi", "paneer sabzi" are one dish, not two
+        const pf = i > 0 ? FOOD_BY_ALIAS[tokens[i - 1]] : null;
+        if (f && pf && (pf === f || (f.name === 'sabzi' && (pf.name === 'paneer dish' || pf.name === 'chicken curry')))) return;
         if (f) {
           let n = numBefore(tokens, i, 3);
           const prev = tokens[i - 1];
@@ -251,7 +260,8 @@
             kcalLo: Math.round((n == null ? 1 : n) * f.kcal[0]), kcalHi: Math.round((n == null ? 1 : n) * f.kcal[1]),
             slot: slot || slotFor(c, hour), skipped: hasNeg, lowConf: !!f.lowConf || wholeAssumed,
           };
-          if (hasNeg) { meal.kcalLo = 0; meal.kcalHi = 0; }
+          meal.protLo = Math.round(meal.qty * f.prot[0] * 10) / 10; meal.protHi = Math.round(meal.qty * f.prot[1] * 10) / 10;
+          if (hasNeg) { meal.kcalLo = 0; meal.kcalHi = 0; meal.protLo = 0; meal.protHi = 0; }
           out.meals.push(meal);
         }
         // water: "<n> glass (paani)" or "<n> bottle/litre"
@@ -309,7 +319,7 @@
   }
 
   function summarize(entries) {
-    const s = { bySlot: { breakfast: { lo: 0, hi: 0, items: [] }, lunch: { lo: 0, hi: 0, items: [] }, snack: { lo: 0, hi: 0, items: [] }, dinner: { lo: 0, hi: 0, items: [] } }, water: 0, walkMin: 0, steps: 0, km: 0, walkSkipped: false, kcalLo: 0, kcalHi: 0, meals: [], slots: new Set(), flags: [], bp: null, sugar: null, entries: entries.length };
+    const s = { protLo: 0, protHi: 0, bySlot: { breakfast: { lo: 0, hi: 0, items: [] }, lunch: { lo: 0, hi: 0, items: [] }, snack: { lo: 0, hi: 0, items: [] }, dinner: { lo: 0, hi: 0, items: [] } }, water: 0, walkMin: 0, steps: 0, km: 0, walkSkipped: false, kcalLo: 0, kcalHi: 0, meals: [], slots: new Set(), flags: [], bp: null, sugar: null, entries: entries.length };
     entries.forEach((e) => {
       s.water += e.water || 0;
       s.walkMin += e.walkMin || 0;
@@ -317,7 +327,7 @@
       if (e.walkSkipped) s.walkSkipped = true;
       (e.meals || []).forEach((m, idx) => {
         if (m.skipped) return;
-        s.kcalLo += m.kcalLo; s.kcalHi += m.kcalHi; s.meals.push(m); if (m.slot) s.slots.add(m.slot);
+        s.kcalLo += m.kcalLo; s.kcalHi += m.kcalHi; s.protLo += m.protLo || 0; s.protHi += m.protHi || 0; s.meals.push(m); if (m.slot) s.slots.add(m.slot);
         const b = s.bySlot[SLOTS.includes(m.slot) ? m.slot : 'snack'];
         b.lo += m.kcalLo; b.hi += m.kcalHi; b.items.push({ ...m, entryId: e.id, idx });
       });
@@ -326,6 +336,7 @@
       if (e.sugar != null) s.sugar = e.sugar;
     });
     s.water = Math.max(0, s.water);
+    s.protLo = Math.round(s.protLo); s.protHi = Math.round(s.protHi);
     s.km = kmFromSteps(s.steps);
     return s;
   }
@@ -341,6 +352,30 @@
     return Math.max(10, Math.min(30, goal));
   }
 
+  // ---------- personal data: protein target and calorie reference ----------
+  // Protein: 0.8-1.0 g/kg for adults under 65 (general RDA-style range); 1.0-1.2 g/kg for 65+
+  // (expert-group suggestion for keeping muscle). More activity nudges the range up. Not a prescription.
+  function proteinTarget(p) {
+    if (!p) return { status: 'need-data' };
+    if (p.proteinLimit) return { status: 'limited' };
+    const w = +p.weightKg, age = +p.age;
+    if (!(w >= 30 && w <= 200) || !(age >= 18 && age <= 110)) return { status: 'need-data' };
+    let lo = age >= 65 ? 1.0 : 0.8, hi = age >= 65 ? 1.2 : 1.0;
+    if (p.activity === 'moderate') { lo += 0.1; hi += 0.2; } else if (p.activity === 'light') { hi += 0.1; }
+    const r = (x) => Math.round(x);
+    return { status: 'ok', lo: r(w * lo), hi: r(w * hi), perKgLo: Math.round(lo * 10) / 10, perKgHi: Math.round(hi * 10) / 10, perMealLo: r((w * lo) / 3), perMealHi: r((w * hi) / 3) };
+  }
+  // Mifflin-St Jeor x activity factor: a rough maintenance estimate, rounded to 50.
+  function kcalReference(p) {
+    if (!p) return null;
+    const w = +p.weightKg, h = +p.heightCm, age = +p.age;
+    if (!(w >= 30 && w <= 200) || !(h >= 100 && h <= 230) || !(age >= 18 && age <= 110)) return null;
+    const off = p.sex === 'male' ? 5 : p.sex === 'female' ? -161 : -78;
+    const f = p.activity === 'moderate' ? 1.55 : p.activity === 'light' ? 1.375 : 1.2;
+    const k = (10 * w + 6.25 * h - 5 * age + off) * f;
+    return Math.max(1200, Math.min(3200, Math.round(k / 50) * 50));
+  }
+
   const NUDGE = {
     breakfast: { en: 'Good morning. Tell me what you had for breakfast: just say it, any language.', hi: 'Suprabhat. Nashte mein kya liya? Bas bol dijiye, kisi bhi bhasha mein.' },
     water: (n, g) => ({ en: `Only ${n} glass of water so far. One glass now?`, hi: `Abhi tak sirf ${n} glass paani. Ek glass abhi?` }),
@@ -349,6 +384,7 @@
       hi: `Aaj ki walk baaki hai. Aaj sirf ${g} minute kaafi hai${shrunk ? ' (aapke hafte ke hisaab se chhota rakha hai)' : ''}.`,
     }),
     walkSkippedToday: { en: 'No problem about the walk today. Tomorrow we keep it short and easy.', hi: 'Aaj walk nahi hui, koi baat nahi. Kal chhoti si rakhenge.' },
+    protein: { en: 'Protein looks low today. A katori of dal, some curd or an egg with dinner helps.', hi: 'Protein kam hai. Raat ke khane mein dal, dahi ya anda lein.' },
     dinner: { en: 'Shall we log dinner? A light dinner helps you sleep well.', hi: 'Raat ka khana log karein? Halka khana neend ke liye accha rehta hai.' },
     good: { en: 'You are on track today. Nothing needed right now.', hi: 'Aaj sab theek chal raha hai. Abhi kuch karne ki zaroorat nahi.' },
   };
@@ -364,6 +400,7 @@
       const shrunk = wg < (goals.walkBase || 20);
       return { kind: 'walk', ...NUDGE.walk(wg - sum.walkMin > 0 ? wg : wg, shrunk) };
     }
+    if (h >= 18 && goals.protein && goals.protein.status === 'ok' && sum.meals.length && (sum.protLo + sum.protHi) / 2 < goals.protein.lo * 0.5) return { kind: 'protein', ...NUDGE.protein };
     if (h >= 19 && !sum.slots.has('dinner')) return { kind: 'dinner', ...NUDGE.dinner };
     return { kind: 'good', ...NUDGE.good };
   }
@@ -416,7 +453,8 @@
     const logged = [];
     if (eaten.length) {
       const lo = eaten.reduce((a, m) => a + m.kcalLo, 0), hi = eaten.reduce((a, m) => a + m.kcalHi, 0);
-      logged.push(eaten.map((m) => fmtMeal(m, lang)).join(', ') + ` (~${lo}-${hi} kcal)`);
+      const plo = Math.round(eaten.reduce((a, m) => a + (m.protLo || 0), 0)), phi = Math.round(eaten.reduce((a, m) => a + (m.protHi || 0), 0));
+      logged.push(eaten.map((m) => fmtMeal(m, lang)).join(', ') + ` (~${lo}-${hi} kcal` + (phi ? `, ~${plo}-${phi} g protein` : '') + ')');
     }
     if (p.water) logged.push(lang === 'en' ? `${p.water} ${p.water === 1 ? 'glass' : 'glasses'} of water` : `${p.water} glass ${L.water[lang]}`);
     if (p.walkMin || p.steps) logged.push(`walk ${Math.round(p.walkMin)} min, ${res.steps} steps, ~${res.km} km${p.stepsEst ? ' (estimated)' : ''}`);
@@ -445,7 +483,15 @@
         name: String(m.name || 'food').slice(0, 40), qty: clamp(m.qty || 1, 0, 20), unit: String(m.unit || '').slice(0, 12),
         kcalLo: Math.round(lo), kcalHi: Math.round(hi), slot: ['breakfast', 'lunch', 'snack', 'dinner'].includes(m.slot) ? m.slot : slotFor('', now.getHours()),
         skipped: !!m.skipped, assumed: !!m.assumed, lowConf: m.confidence === 'low',
+        protLo: 0, protHi: 0,
       };
+    }).map((m, i) => {
+      const src = (Array.isArray(obj.meals) ? obj.meals : [])[i] || {};
+      if (m.skipped) return m;
+      let plo = clamp(src.protein_lo, 0, 200), phi = Math.max(plo, clamp(src.protein_hi, 0, 200));
+      if (!phi) { const f = FOODS.find((x) => x.name === m.name.toLowerCase()); if (f) { plo = f.prot[0] * m.qty; phi = f.prot[1] * m.qty; } }
+      m.protLo = Math.round(plo * 10) / 10; m.protHi = Math.round(phi * 10) / 10;
+      return m;
     });
     let level = det.level, kind = det.kind;
     const reasons = det.reasons.slice();
@@ -489,7 +535,14 @@
     if (safety.level === 'red') return { source: 'safety', safety, answer: sm, topic: 'safety' };
     let topic = 'other', a;
     if (MED_OBJ.test(q)) { topic = 'medicine'; a = SAFETY_TEXT.med.en; }
-    else if (/(how am i|how('s| is) my day|my progress|today.*(summary|so far)|so far today|how much have i)/.test(q)) {
+    else if (/protein/.test(q)) {
+      topic = 'protein';
+      const pt = g.protein;
+      const sofar = s.protHi ? ` So far today you have had roughly ${s.protLo}-${s.protHi} g.` : ' Nothing with protein is logged yet today.';
+      if (pt && pt.status === 'ok') a = `For your age and weight, a common range is about ${pt.lo}-${pt.hi} g of protein a day (${pt.perKgLo}-${pt.perKgHi} g per kg), spread over your meals.${sofar} Dal, curd, paneer, eggs, milk and sprouts all help.`;
+      else if (pt && pt.status === 'limited') a = 'You told me your doctor has limited your protein, so please follow your doctor. I will not suggest a target.';
+      else a = `Add your age and weight in the Me tab and I will work out a range. In general, adults need about 0.8-1.0 g per kg a day, and many older adults do better with 1.0-1.2 g per kg. If you have kidney disease, follow your doctor.${sofar}`;
+    } else if (/(how am i|how('s| is) my day|my progress|today.*(summary|so far)|so far today|how much have i)/.test(q)) {
       topic = 'today';
       const food = s.kcalHi ? ` Food so far is roughly ${s.kcalLo}-${s.kcalHi} kcal.` : ' No food logged yet.';
       a = `Today: water ${s.water} of ${g.water} glasses, walking ${s.walkMin} of ${g.walk} minutes (${s.steps || 0} steps, ${s.km || 0} km).${food}`;
@@ -534,8 +587,8 @@
     const kcal = sum.kcalHi ? `${sum.kcalLo}-${sum.kcalHi} kcal (rough)` : '-';
     const flag = sum.flags.length ? (lang === 'hi' ? '\nDhyaan: kuch symptoms note kiye gaye, doctor ko batana hai.' : '\nNote: symptoms were logged, please check with the doctor.') : '';
     if (lang === 'hi') return `${n} ka din:\nPaani: ${sum.water}/${goals.water} glass\nWalk: ${sum.walkMin}/${goals.walk} min\nKhana: ${sum.meals.length} items, ${kcal}${flag}\n(Dinchariya app - medical salah nahi)`;
-    return `${n}'s day:\nWater: ${sum.water}/${goals.water} glasses\nWalk: ${sum.walkMin}/${goals.walk} min, ${sum.steps} steps, ${sum.km} km\nFood: ${sum.meals.length} items, ${kcal}${flag}\n(Dinchariya app - not medical advice)`;
+    return `${n}'s day:\nWater: ${sum.water}/${goals.water} glasses\nWalk: ${sum.walkMin}/${goals.walk} min, ${sum.steps} steps, ${sum.km} km\nFood: ${sum.meals.length} items, ${kcal}${sum.protHi ? `\nProtein: about ${sum.protLo}-${sum.protHi} g (rough)` : ''}${flag}\n(Dinchariya app - not medical advice)`;
   }
 
-  return { SLOTS, kmFromSteps, STEP_KM, STEPS_PER_MIN, answerQuery, parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };
+  return { proteinTarget, kcalReference, SLOTS, kmFromSteps, STEP_KM, STEPS_PER_MIN, answerQuery, parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };
 });

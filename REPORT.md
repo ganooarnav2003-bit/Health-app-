@@ -42,7 +42,7 @@
 
 **Adaptive plan (not a fixed plan):** walking goal = `clamp(round5(avg_last_3_days * 1.2 + 5), 10, 30)` min. A person who walked 5/0/12 min gets 10 min, not an impossible 30. The tile says why. Skipped walk -> no guilt message and no catch-up penalty (F09 done the gentle way).
 
-### Test: 19 realistic inputs, **demo engine** (`node tests/run-tests.js`)
+### Test: 20 realistic inputs, **demo engine** (`node tests/run-tests.js`)
 | # | Input | Why this case | Result | Detail |
 |---|---|---|---|---|
 | 1 | aaj subah 2 roti aur ek katori dal khayi, chai bhi pi | Hinglish meal | pass | |
@@ -64,8 +64,9 @@
 | 17 | had kadhi and 2 pakora with rice | foods outside the dictionary | **FAIL** | kadhi and pakora silently missed; only rice logged |
 | 18 | drank 2 glasses of milk | milk must not count as water | pass | |
 | 19 | lunch was 2 roti, dal, sabzi and rice | later items must inherit "lunch" | pass | **found by browser testing**: items after "and" were filed under breakfast until fixed |
+| 20 | lunch was aloo sabzi and paneer sabzi with 2 roti | 'X sabzi' is one dish | pass | **found by browser testing**: was counted as two dishes |
 
-**What this shows (honest reading).** 17/19 pass on the offline parser. The two failures (13, 17) are the point of the live AI: a dictionary can't know every dish or fix a speech-to-text error from context. Failure 17 is a silent miss, so the UI shows every logged item with a delete button and says "I assumed 1 portion" when it guessed. Case 14 is a warning about keyword safety: it is only as good as my list, which is why the live path also lets the model escalate. **Not yet done:** the same 19 cases against the live AI (`node tests/run-tests.js --url https://YOUR-APP/api/coach`). `TODO: paste that second table and add >= 3 new inputs from your target user.`
+**What this shows (honest reading).** 18/20 pass on the offline parser. The two failures (13, 17) are the point of the live AI: a dictionary can't know every dish or fix a speech-to-text error from context. Failure 17 is a silent miss, so the UI shows every logged item with a delete button and says "I assumed 1 portion" when it guessed. Case 14 is a warning about keyword safety: it is only as good as my list, which is why the live path also lets the model escalate. **Not yet done:** the same 20 cases against the live AI (`node tests/run-tests.js --url https://YOUR-APP/api/coach`). `TODO: paste that second table and add >= 3 new inputs from your target user.`
 
 ## Q4. What will you build and leave out? (10)
 | ID | Feature | Decision | Reason |
@@ -88,6 +89,10 @@
 | F16 | Caretaker/nurse | **Never** | Marketplace and liability |
 | F17 | Guardian access | **Build now, light** | WhatsApp share, no accounts; consent = she presses the button |
 | F18 | Friends groups | **Never** | Competition/rating works against an older user's comfort |
+| New | Dashboard (progress rings, 7-day chart, streak) | **Build now** | One glance answers "how am I doing?"; patterned on popular fitness apps, kept to four numbers |
+| New | Right-hand menu (hamburger) + bottom tabs | **Build now** | Familiar navigation for people who already use phone apps; big targets |
+| New | Personal data -> protein target | **Build now** | Range from age, weight and activity (0.8-1.0 g/kg under 65, 1.0-1.2 g/kg at 65+); hidden if the user says their doctor limited protein |
+| New | Daily health digest | **Build now**, as *curated tips*, not news | 31 general tips, 3 a day, reordered by what the user is behind on; I cannot vouch for live news feeds, so I did not fake one |
 | New | Voice input | **Build now** | Research hypothesis: typing is the barrier |
 | New | Water tracker (tap +/- glass) | **Build now** | Doctor's advice for the customer; one tap beats typing |
 | New | AI assistant chat (multi-turn, tool-using agent) | **Build now** | Answers questions about her own day; refuses medical/medicine questions |

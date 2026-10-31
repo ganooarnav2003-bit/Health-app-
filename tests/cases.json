@@ -209,5 +209,18 @@
     "rice": "lunch"
    }
   }
+ },
+ {
+  "id": 20,
+  "input": "lunch was aloo sabzi and paneer sabzi with 2 roti",
+  "why": "'X sabzi' is one dish, not two",
+  "expect": {
+   "safety": "none",
+   "meals": {
+    "roti": 2,
+    "sabzi": 1,
+    "paneer": 1
+   }
+  }
  }
 ]

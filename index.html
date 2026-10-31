@@ -11,6 +11,34 @@
 <body>
 <div class="notice" role="note">Not medical advice. This app does not diagnose or prescribe. For chest pain, trouble breathing or fainting, call <b>112</b>. Demo uses made-up data only.</div>
 
+<header id="appbar" class="appbar" hidden>
+  <div class="brandrow">
+    <svg class="mini-logo" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#000" stroke="#2fd46b" stroke-width="2"/><path d="M24 37s-11-6.6-11-15a6.3 6.3 0 0 1 11-4.2A6.3 6.3 0 0 1 35 22c0 8.4-11 15-11 15z" fill="#2fd46b"/><path d="M14 25h6l2-4 3 7 2-3h7" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="brandname">Dinchariya</span>
+  </div>
+  <button id="menu-btn" class="menu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
+</header>
+
+<div id="scrim" class="scrim" hidden></div>
+<nav id="drawer" class="drawer" aria-label="Main menu" inert>
+  <div class="dhead"><div><div class="dname" id="d-name">Menu</div><div class="muted" id="d-sub"></div></div><button id="menu-close" class="mini" type="button" aria-label="Close menu">✕</button></div>
+  <ul class="dlist">
+    <li><button data-go="home">📊 Dashboard</button></li>
+    <li><button data-go="track" data-scroll="logcard">🍽 Log food</button></li>
+    <li><button data-go="track" data-scroll="kcalcard">🔥 Calories</button></li>
+    <li><button data-go="track" data-scroll="watercard">💧 Water</button></li>
+    <li><button data-go="track" data-scroll="walkcard">🚶 Steps &amp; distance</button></li>
+    <li><button data-go="me" data-scroll="proteincard">💪 Protein &amp; personal data</button></li>
+    <li><button data-go="chat">🤖 AI assistant</button></li>
+    <li><button data-go="tips">📰 Daily health digest</button></li>
+    <li class="sep"></li>
+    <li><button id="d-share" type="button">📤 Share today with family</button></li>
+    <li><button id="d-sample" type="button" class="soft">🧪 Load sample week (made-up)</button></li>
+    <li><button id="d-reset" type="button" class="soft">🗑 Erase all my notes</button></li>
+  </ul>
+  <p class="why">General information only. This app never diagnoses or prescribes. Your notes stay on this phone.</p>
+</nav>
+
 <main id="app" class="wrap">
   <!-- Onboarding: the first two minutes -->
   <section id="onboard" class="welcome" hidden>
@@ -33,97 +61,185 @@
     </div>
   </section>
 
-  <!-- Daily screen -->
+  <!-- App -->
   <section id="main" hidden>
-    <header class="top">
-      <div><div id="hello" class="hello"></div><div id="date" class="muted"></div></div>
-    </header>
 
-    <article id="nudge" class="card nudge" aria-live="polite"></article>
+    <!-- HOME / DASHBOARD -->
+    <section id="v-home" class="view" data-view="home">
+      <div class="top"><div id="hello" class="hello"></div><div id="date" class="muted"></div></div>
+      <article id="nudge" class="card nudge" aria-live="polite"></article>
+      <article id="setup" class="card setup" hidden>
+        <b>Get your protein target</b>
+        <span>Add your age and weight (takes 20 seconds) and I will work out a daily range.</span>
+        <button class="primary" data-go="me" data-scroll="profilecard" type="button">Add my details</button>
+      </article>
 
-    <section class="card" aria-labelledby="h-log">
-      <h2 id="h-log">Tell me about your day</h2>
-      <div class="chips" id="chips"></div>
-      <label class="sr" for="say">What did you eat, drink or do today?</label>
-      <textarea id="say" rows="3" placeholder="e.g. 2 roti, dal, 1 glass water, 15 min walk"></textarea>
-      <div class="row">
-        <button id="mic" class="big" aria-label="Speak">🎤</button>
-        <button id="photo" class="big" aria-label="Photo of plate">📷</button>
-        <button id="send" class="big primary">Log it</button>
-      </div>
-      <input type="file" id="file" accept="image/*" capture="environment" hidden>
-      <div id="reply" class="reply" hidden aria-live="polite"></div>
+      <section class="rings" aria-label="Today's progress">
+        <button class="ringtile" id="r-kcal" data-go="track" data-scroll="kcalcard" type="button"></button>
+        <button class="ringtile" id="r-prot" data-go="me" data-scroll="proteincard" type="button"></button>
+        <button class="ringtile" id="r-water" data-go="track" data-scroll="watercard" type="button"></button>
+        <button class="ringtile" id="r-steps" data-go="track" data-scroll="walkcard" type="button"></button>
+      </section>
+
+      <section class="quick" aria-label="Quick actions">
+        <button id="q-water" type="button"><span>💧</span>+1 glass</button>
+        <button id="q-steps" type="button"><span>🚶</span>+1,000 steps</button>
+        <button id="q-log" type="button"><span>🍽</span>Log food</button>
+        <button id="q-ask" type="button"><span>🤖</span>Ask AI</button>
+      </section>
+
+      <section class="card" aria-labelledby="h-week">
+        <div class="thead"><h2 id="h-week">This week</h2><div class="streak" id="streak"></div></div>
+        <div class="chips" id="metricchips" role="group" aria-label="Chart metric"></div>
+        <div id="chart" class="chart" role="img" aria-label="Last seven days"></div>
+        <p class="why" id="chart-note"></p>
+      </section>
+
+      <button class="card teaser" id="teaser" data-go="tips" type="button"></button>
     </section>
 
-    <section class="card" id="kcalcard" aria-labelledby="h-kcal">
-      <div class="thead"><h2 id="h-kcal">🍽 Calories</h2><div class="stat"><span class="v" id="k-val"></span><span class="k">kcal · rough range</span></div></div>
-      <div class="bar"><i id="b-kcal"></i></div>
-      <p class="muted" id="k-empty">Tell me what you ate above and your calories will appear here, meal by meal.</p>
-      <div id="k-slots"></div>
-      <p class="why" id="k-ref"></p>
-      <div class="row">
-        <input id="kgoal" type="number" inputmode="numeric" min="800" max="4000" placeholder="Daily target (optional)" aria-label="Your own daily calorie target">
-        <button id="kgoal-set" class="big">Set</button>
-      </div>
-      <p class="why">These are ranges for typical home portions, not exact. If something looks wrong, tap ✕ to remove it. This is not dietary or medical advice.</p>
+    <!-- TRACK -->
+    <section id="v-track" class="view" data-view="track" hidden>
+      <h1 class="vtitle">Track</h1>
+      <section class="card" id="logcard" aria-labelledby="h-log">
+        <h2 id="h-log">Tell me about your day</h2>
+        <div class="chips" id="chips"></div>
+        <label class="sr" for="say">What did you eat, drink or do today?</label>
+        <textarea id="say" rows="3" placeholder="e.g. 2 roti, dal, 1 glass water, 15 min walk"></textarea>
+        <div class="row">
+          <button id="mic" class="big" aria-label="Speak">🎤</button>
+          <button id="photo" class="big" aria-label="Photo of plate">📷</button>
+          <button id="send" class="big primary">Log it</button>
+        </div>
+        <input type="file" id="file" accept="image/*" capture="environment" hidden>
+        <div id="reply" class="reply" hidden aria-live="polite"></div>
+      </section>
+
+      <section class="card" id="kcalcard" aria-labelledby="h-kcal">
+        <div class="thead"><h2 id="h-kcal">🍽 Calories &amp; protein</h2><div class="stat"><span class="v" id="k-val"></span><span class="k">kcal · rough range</span></div></div>
+        <div class="bar"><i id="b-kcal"></i></div>
+        <p class="muted" id="k-prot"></p>
+        <p class="muted" id="k-empty">Tell me what you ate above and your calories will appear here, meal by meal.</p>
+        <div id="k-slots"></div>
+        <p class="why" id="k-ref"></p>
+        <div class="row">
+          <input id="kgoal" type="number" inputmode="numeric" min="800" max="4000" placeholder="Daily target (optional)" aria-label="Your own daily calorie target">
+          <button id="kgoal-set" class="big">Set</button>
+        </div>
+        <p class="why">These are ranges for typical home portions, not exact. If something looks wrong, tap ✕ to remove it. This is not dietary or medical advice.</p>
+      </section>
+
+      <section class="card" id="watercard" aria-labelledby="h-water">
+        <div class="thead"><h2 id="h-water">💧 Water</h2><div class="stat"><span class="v" id="w-val"></span><span class="k" id="w-sub"></span></div></div>
+        <div class="glasses" id="glasses" aria-hidden="true"></div>
+        <div class="bar"><i id="b-water"></i></div>
+        <div class="row">
+          <button id="w-minus" aria-label="Remove one glass">−</button>
+          <button id="w-plus" class="primary">+ 1 glass</button>
+          <button id="w-bottle">+ Bottle</button>
+        </div>
+        <p class="why">1 glass = 250 ml, a bottle = 3 glasses. If your doctor has limited your fluids, follow your doctor, not this goal.</p>
+      </section>
+
+      <section class="card" id="walkcard" aria-labelledby="h-walk">
+        <div class="thead"><h2 id="h-walk">🚶 Steps &amp; distance</h2></div>
+        <div class="stats3">
+          <div><span class="v" id="s-steps"></span><span class="k">steps</span></div>
+          <div><span class="v" id="s-km"></span><span class="k">km</span></div>
+          <div><span class="v" id="s-min"></span><span class="k">minutes</span></div>
+        </div>
+        <div class="bar"><i id="b-steps"></i></div>
+        <p class="why" id="walk-why"></p>
+        <div class="chips" id="stepchips"></div>
+        <div class="row">
+          <input id="steps-in" type="number" inputmode="numeric" min="1" max="40000" placeholder="Steps to add" aria-label="Steps to add">
+          <button id="steps-add" class="primary big">Add</button>
+        </div>
+        <p class="why">Distance is estimated from steps (about 0.7 m per step), so treat it as approximate.</p>
+      </section>
+
+      <section class="card">
+        <h2>Today's notes</h2>
+        <ul id="log" class="log"></ul>
+        <p id="empty" class="muted">Nothing yet.</p>
+      </section>
     </section>
 
-    <section class="card" id="watercard" aria-labelledby="h-water">
-      <div class="thead"><h2 id="h-water">💧 Water</h2><div class="stat"><span class="v" id="w-val"></span><span class="k" id="w-sub"></span></div></div>
-      <div class="glasses" id="glasses" aria-hidden="true"></div>
-      <div class="bar"><i id="b-water"></i></div>
-      <div class="row">
-        <button id="w-minus" aria-label="Remove one glass">−</button>
-        <button id="w-plus" class="primary">+ 1 glass</button>
-        <button id="w-bottle">+ Bottle</button>
-      </div>
-      <p class="why">1 glass = 250 ml, a bottle = 3 glasses. If your doctor has limited your fluids, follow your doctor, not this goal.</p>
+    <!-- CHAT -->
+    <section id="v-chat" class="view" data-view="chat" hidden>
+      <h1 class="vtitle">AI assistant</h1>
+      <section class="card" id="chatcard" aria-labelledby="h-chat">
+        <div class="thead"><h2 id="h-chat">🤖 Ask me anything about your day</h2><button id="chat-clear" class="ghost mini" type="button">Clear</button></div>
+        <div id="chatlog" class="chatlog tall" role="log" aria-live="polite"></div>
+        <div class="chips" id="askchips"></div>
+        <form id="chatform" class="row" autocomplete="off">
+          <input id="q" maxlength="300" placeholder="Ask a question…" aria-label="Your question">
+          <button class="primary big" id="ask" type="submit">Send</button>
+        </form>
+        <p class="why">General information only, not medical advice. It will not diagnose or discuss medicines.</p>
+      </section>
     </section>
 
-    <section class="card" id="walkcard" aria-labelledby="h-walk">
-      <div class="thead"><h2 id="h-walk">🚶 Walking</h2></div>
-      <div class="stats3">
-        <div><span class="v" id="s-steps"></span><span class="k">steps</span></div>
-        <div><span class="v" id="s-km"></span><span class="k">km</span></div>
-        <div><span class="v" id="s-min"></span><span class="k">minutes</span></div>
-      </div>
-      <div class="bar"><i id="b-steps"></i></div>
-      <p class="why" id="walk-why"></p>
-      <div class="chips" id="stepchips"></div>
-      <div class="row">
-        <input id="steps-in" type="number" inputmode="numeric" min="1" max="40000" placeholder="Steps to add" aria-label="Steps to add">
-        <button id="steps-add" class="primary big">Add</button>
-      </div>
-      <p class="why">Distance is estimated from steps (about 0.7 m per step), so treat it as approximate.</p>
+    <!-- DAILY DIGEST -->
+    <section id="v-tips" class="view" data-view="tips" hidden>
+      <h1 class="vtitle">Daily health digest</h1>
+      <p class="muted" id="tips-date"></p>
+      <div id="tips-today"></div>
+      <h2 class="sub">Earlier this week</h2>
+      <div id="tips-earlier"></div>
+      <h2 class="sub">Browse all tips</h2>
+      <div class="chips" id="tipcats" role="group" aria-label="Tip category"></div>
+      <div id="tips-all"></div>
+      <p class="why">A curated set of general wellness tips that refreshes every day and reacts to your day. It is not live news and not medical advice. Figures come from widely published guidance such as WHO recommendations.</p>
     </section>
 
-    <section class="card" id="chatcard" aria-labelledby="h-chat">
-      <div class="thead"><h2 id="h-chat">🤖 Ask the assistant</h2><button id="chat-clear" class="ghost mini" type="button">Clear</button></div>
-      <div id="chatlog" class="chatlog" role="log" aria-live="polite"></div>
-      <div class="chips" id="askchips"></div>
-      <form id="chatform" class="row" autocomplete="off">
-        <input id="q" maxlength="300" placeholder="Ask a question…" aria-label="Your question">
-        <button class="primary big" id="ask" type="submit">Send</button>
-      </form>
-      <p class="why">General information only, not medical advice. It will not diagnose or discuss medicines.</p>
-    </section>
+    <!-- ME -->
+    <section id="v-me" class="view" data-view="me" hidden>
+      <h1 class="vtitle">Me</h1>
+      <section class="card" id="profilecard" aria-labelledby="h-prof">
+        <h2 id="h-prof">Personal data</h2>
+        <p class="muted">Used only to work out your protein range and a calorie reference. Stored on this phone.</p>
+        <div class="grid2">
+          <div><label for="pf-name">Name</label><input id="pf-name" maxlength="30" autocomplete="off"></div>
+          <div><label for="pf-age">Age</label><input id="pf-age" type="number" inputmode="numeric" min="18" max="110"></div>
+          <div><label for="pf-weight">Weight (kg)</label><input id="pf-weight" type="number" inputmode="decimal" min="30" max="200"></div>
+          <div><label for="pf-height">Height (cm)</label><input id="pf-height" type="number" inputmode="numeric" min="100" max="230"></div>
+          <div><label for="pf-sex">Sex</label><select id="pf-sex"><option value="">Prefer not to say</option><option value="female">Female</option><option value="male">Male</option></select></div>
+          <div><label for="pf-activity">Activity</label><select id="pf-activity"><option value="low">Mostly sitting</option><option value="light">Light (daily walks)</option><option value="moderate">Active (exercise most days)</option></select></div>
+        </div>
+        <label class="check"><input type="checkbox" id="pf-plimit"> My doctor has limited my protein (for example kidney disease)</label>
+        <div class="row"><button id="pf-save" class="primary big">Save</button></div>
+        <p class="why" id="pf-msg" aria-live="polite"></p>
+      </section>
 
-    <section class="card">
-      <h2>Today's notes</h2>
-      <p class="muted" id="foodline"></p>
-      <ul id="log" class="log"></ul>
-      <p id="empty" class="muted">Nothing yet.</p>
-    </section>
+      <section class="card" id="proteincard" aria-labelledby="h-prot">
+        <h2 id="h-prot">💪 Your daily protein</h2>
+        <div id="prot-body"></div>
+      </section>
 
-    <section class="actions">
-      <button id="share">Share today with family (WhatsApp)</button>
-      <button id="sample" class="ghost">Load sample week (made-up)</button>
-      <button id="reset" class="ghost">Erase all my notes</button>
+      <section class="card">
+        <h2>Your data</h2>
+        <div class="actions">
+          <button id="share" type="button">Share today with family (WhatsApp)</button>
+          <button id="sample" class="ghost" type="button">Load sample week (made-up)</button>
+          <button id="reset" class="ghost" type="button">Erase all my notes</button>
+        </div>
+        <p class="why"><span id="mode"></span></p>
+      </section>
     </section>
-    <p class="why"><span id="mode"></span></p>
   </section>
 </main>
+
+<nav id="tabbar" class="tabbar" aria-label="Sections" hidden>
+  <button data-go="home" type="button"><i>📊</i><span>Home</span></button>
+  <button data-go="track" type="button"><i>🍽</i><span>Track</span></button>
+  <button data-go="chat" type="button"><i>🤖</i><span>Assistant</span></button>
+  <button data-go="tips" type="button"><i>📰</i><span>Digest</span></button>
+  <button data-go="me" type="button"><i>👤</i><span>Me</span></button>
+</nav>
+
 <script src="engine.js"></script>
+<script src="tips.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
