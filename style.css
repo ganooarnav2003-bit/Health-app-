@@ -209,3 +209,7 @@ select{width:100%;font:inherit;padding:12px;border:2px solid var(--line);border-
 .plan h3{margin:0;font-size:1.1rem}.plan .price{font-size:1.9rem;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}.plan .per{color:var(--mut);font-size:.9rem}
 .compare{width:100%;border-collapse:collapse;font-size:.95rem}.compare th,.compare td{padding:8px 4px;border-top:1px solid var(--line);text-align:center}.compare thead th{border-top:0;color:var(--mut);font-size:.8rem}.compare tbody th{text-align:left;font-weight:500}
 .rowbtns{display:flex;gap:4px}.rowbtns button{min-height:44px;min-width:44px;padding:0 10px}
+
+.freebadge{display:inline-block;margin:0 0 8px;padding:4px 12px;border-radius:99px;background:#0b2415;border:1px solid #1f7a45;color:var(--pri);font-weight:700;font-size:.9rem}
+.plan.free{border-color:#1f7a45}.plan.free.current{background:#0b1f14}
+.plan ul{margin:2px 0 4px;padding-left:1.1em;color:var(--mut);font-size:.95rem}

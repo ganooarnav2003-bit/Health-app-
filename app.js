@@ -429,6 +429,13 @@
     box.querySelector('b').textContent = pro ? '⭐ Premium is on' : 'You are on the Free plan';
     box.querySelector('span').textContent = pro ? `Until ${dateStr(st.plan.endsTs)} (${days} day${days === 1 ? '' : 's'} left) · ${st.plan.source === 'reward' ? 'earned with your steps' : 'demo plan, nothing was charged'}` : 'Everything important is free. Premium adds unlimited AI questions and your full walk history.';
     const best = PL.bestValueId(), wrap = $('#plan-cards'); wrap.innerHTML = '';
+    // The Free plan is a real, visible plan: always available, never expires, no card needed
+    const f = document.createElement('article'); f.className = 'plan free' + (pro ? '' : ' current');
+    f.innerHTML = (pro ? '' : '<span class="pbadge">Your plan</span>') + '<h3>Free</h3><div class="price">₹0</div><div class="per">Free forever · no card needed</div><ul></ul><button type="button" id="plan-cancel"></button>';
+    ['Food, calories, protein, water and steps tracking', 'Daily health digest and 10,000-step rewards', 'AI assistant: 5 questions a day', 'Your latest 3 saved walks on the map', 'All safety and emergency messages'].forEach((t) => { const li = document.createElement('li'); li.textContent = t; f.querySelector('ul').appendChild(li); });
+    const fb = f.querySelector('button'); fb.textContent = pro ? 'Switch to Free' : '✓ This is your plan'; fb.disabled = !pro; fb.className = pro ? 'big' : 'big ghost';
+    fb.onclick = () => { if (confirm('Switch back to the Free plan? Any remaining Premium days on this phone will be removed.')) { st.plan = null; save(); render(); toast('Back on the Free plan'); } };
+    wrap.appendChild(f);
     PL.PLANS.forEach((p) => {
       const a = document.createElement('article'); a.className = 'plan' + (p.id === best ? ' best' : '');
       a.innerHTML = (p.id === best ? '<span class="pbadge">Lowest per month</span>' : '') + '<h3></h3><div class="price"></div><div class="per"></div><button class="primary big" type="button"></button>';
@@ -442,7 +449,6 @@
       };
       wrap.appendChild(a);
     });
-    $('#plan-cancel').hidden = !pro;
   }
 
   // ---------------- rewards ----------------
@@ -610,7 +616,6 @@
   $('#walk-start').onclick = () => startTracking('gps');
   $('#walk-stop').onclick = () => stopTracking(false);
   $('#walk-demo').onclick = () => startTracking('demo');
-  $('#plan-cancel').onclick = () => { if (confirm('Switch back to the Free plan? Any remaining Premium days on this phone will be removed.')) { st.plan = null; save(); render(); toast('Back on the Free plan'); } };
   document.addEventListener('visibilitychange', () => { if (!document.hidden && tracking && tracking.source === 'gps') $('#walk-msg').textContent = 'Tracking can pause when the screen is off, so the distance may be a little short.'; });
   $('#q-water').onclick = () => addWater(1);
   $('#q-steps').onclick = () => addSteps(1000);

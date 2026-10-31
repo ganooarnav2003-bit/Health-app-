@@ -35,4 +35,5 @@ node tests/run-tests.js          # test table
 Fonts are system fonts. Food kcal ranges are rough, typical home-portion estimates written for this project.
 
 ## Subscription (demo)
+Everyone starts on a permanent **Free plan** (no sign-up, no login, no card). There is no account system on purpose: the course brief asks for no sign-up, and your notes stay on your phone.
 The plans screen is a **demo**: nothing is charged. A real launch needs a payment provider (for example Razorpay Checkout plus a webhook to a small backend that records who has paid), and a check of taxes, refund and cancellation rules. Note the current prices make Yearly (Rs 667/month) dearer per month than Monthly (Rs 599) and 6 months (Rs 217): `node tests/run-walk-plans.js` flags this, and the UI badge is computed from the numbers.
