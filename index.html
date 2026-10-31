@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dinchariya: daily health check-in</title>
 <meta name="description" content="Say your day in your own words. Dinchariya logs it, adapts your walking goal and nudges you gently.">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,7 +15,7 @@
 <header id="appbar" class="appbar" hidden>
   <div class="brandrow">
     <svg class="mini-logo" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#000" stroke="#2fd46b" stroke-width="2"/><path d="M24 37s-11-6.6-11-15a6.3 6.3 0 0 1 11-4.2A6.3 6.3 0 0 1 35 22c0 8.4-11 15-11 15z" fill="#2fd46b"/><path d="M14 25h6l2-4 3 7 2-3h7" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span class="brandname">Dinchariya</span>
+    <span class="brandname">Dinchariya</span><span id="pro-chip" class="prochip" hidden>PRO</span>
   </div>
   <button id="menu-btn" class="menu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
 </header>
@@ -24,6 +25,10 @@
   <div class="dhead"><div><div class="dname" id="d-name">Menu</div><div class="muted" id="d-sub"></div></div><button id="menu-close" class="mini" type="button" aria-label="Close menu">✕</button></div>
   <ul class="dlist">
     <li><button data-go="home">📊 Dashboard</button></li>
+    <li><button data-go="walk">🗺 Walk map</button></li>
+    <li><button data-go="rewards">🏆 Rewards · 10,000 steps</button></li>
+    <li><button data-go="plans">⭐ Plans &amp; Premium <span class="tag" id="d-plan-tag">Free</span></button></li>
+    <li class="sep"></li>
     <li><button data-go="track" data-scroll="logcard">🍽 Log food</button></li>
     <li><button data-go="track" data-scroll="kcalcard">🔥 Calories</button></li>
     <li><button data-go="track" data-scroll="watercard">💧 Water</button></li>
@@ -87,6 +92,8 @@
         <button id="q-log" type="button"><span>🍽</span>Log food</button>
         <button id="q-ask" type="button"><span>🤖</span>Ask AI</button>
       </section>
+
+      <button class="card rewardtile" id="rewardcard" data-go="rewards" type="button"></button>
 
       <section class="card" aria-labelledby="h-week">
         <div class="thead"><h2 id="h-week">This week</h2><div class="streak" id="streak"></div></div>
@@ -165,6 +172,82 @@
       </section>
     </section>
 
+    <!-- WALK MAP -->
+    <section id="v-walk" class="view" data-view="walk" hidden>
+      <h1 class="vtitle">Walk map</h1>
+      <section class="card" id="mapcard" aria-labelledby="h-map">
+        <h2 id="h-map">🗺 Track a walk</h2>
+        <div id="map" class="map" aria-label="Map of your walk"></div>
+        <p class="why" id="map-note"></p>
+        <div class="stats3">
+          <div><span class="v" id="m-km">0.00</span><span class="k">km</span></div>
+          <div><span class="v" id="m-time">0:00</span><span class="k">time</span></div>
+          <div><span class="v" id="m-steps">0</span><span class="k">steps (est.)</span></div>
+        </div>
+        <div class="row">
+          <button id="walk-start" class="primary big">▶ Start walk</button>
+          <button id="walk-stop" class="big" hidden>■ Stop &amp; save</button>
+        </div>
+        <div class="row"><button id="walk-demo" class="ghost" type="button">Try a demo walk (made-up route)</button></div>
+        <p class="why" id="walk-msg" aria-live="polite"></p>
+        <p class="why">Keep this screen open while you walk, as phones can pause GPS when the screen is off. Your location and routes stay on this phone only. Steps are estimated from distance, so they are approximate.</p>
+      </section>
+      <section class="card">
+        <h2>Your walks</h2>
+        <ul id="walklist" class="log"></ul>
+        <p id="walk-empty" class="muted">No walks saved yet. Start one above.</p>
+        <button id="walk-lock" class="ghost full" data-go="plans" type="button" hidden></button>
+      </section>
+    </section>
+
+    <!-- REWARDS -->
+    <section id="v-rewards" class="view" data-view="rewards" hidden>
+      <h1 class="vtitle">Rewards</h1>
+      <section class="card" aria-labelledby="h-rw">
+        <h2 id="h-rw">🏆 Walk 10,000 steps, earn points</h2>
+        <div class="stat left"><span class="v" id="rw-steps"></span><span class="k" id="rw-sub"></span></div>
+        <div class="bar"><i id="rw-bar"></i></div>
+        <div class="protrow">
+          <div><span class="v" id="rw-bal">0</span><span class="k">points to spend</span></div>
+          <div><span class="v" id="rw-streak">0</span><span class="k">day streak</span></div>
+        </div>
+        <p class="muted" id="rw-next"></p>
+        <p class="why">Every day you reach 10,000 steps earns 100 points. Streak bonuses: 3 days +50, 7 days +150, 30 days +500. Steps you type in count too and are self-reported, so rewards are in-app only. 10,000 is a popular target, not a medical one: walk at a pace that feels comfortable, and follow your doctor's advice.</p>
+      </section>
+      <section class="card">
+        <h2>Badges</h2>
+        <ul id="rw-badges" class="badges"></ul>
+      </section>
+      <section class="card">
+        <h2>Spend your points</h2>
+        <div id="rw-redeem"></div>
+        <p class="why" id="rw-msg" aria-live="polite"></p>
+      </section>
+    </section>
+
+    <!-- PLANS -->
+    <section id="v-plans" class="view" data-view="plans" hidden>
+      <h1 class="vtitle">Plans &amp; Premium</h1>
+      <section class="card status" id="plan-status"></section>
+      <div id="plan-cards"></div>
+      <section class="card">
+        <h2>What you get</h2>
+        <table class="compare" aria-label="Free versus Premium">
+          <thead><tr><th scope="col">Feature</th><th scope="col">Free</th><th scope="col">Premium</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Food, calories, protein, water, steps</th><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Daily health digest &amp; rewards</th><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">AI assistant questions</th><td>5 a day</td><td>Unlimited</td></tr>
+            <tr><th scope="row">Saved walks on the map</th><td>Latest 3</td><td>All</td></tr>
+            <tr><th scope="row">Emergency &amp; safety messages</th><td>Always free</td><td>Always free</td></tr>
+          </tbody>
+        </table>
+        <p class="why">Safety features are never limited by a plan. You can also earn Premium days with your steps on the Rewards screen.</p>
+      </section>
+      <p class="why" id="plan-note">Demo only: no payment is taken and nothing is charged. Choosing a plan switches Premium on for this phone. A real launch would need a payment provider such as Razorpay, plus checking taxes and refund rules.</p>
+      <button id="plan-cancel" class="ghost full" type="button" hidden>Switch back to Free</button>
+    </section>
+
     <!-- DAILY DIGEST -->
     <section id="v-tips" class="view" data-view="tips" hidden>
       <h1 class="vtitle">Daily health digest</h1>
@@ -218,6 +301,7 @@
 <nav id="tabbar" class="tabbar" aria-label="Sections" hidden>
   <button data-go="home" type="button"><i>📊</i><span>Home</span></button>
   <button data-go="track" type="button"><i>🍽</i><span>Track</span></button>
+  <button data-go="walk" type="button"><i>🗺</i><span>Walk</span></button>
   <button data-go="tips" type="button"><i>📰</i><span>Digest</span></button>
   <button data-go="me" type="button"><i>👤</i><span>Me</span></button>
 </nav>
@@ -235,6 +319,7 @@
   </header>
   <div id="chatlog" class="chatlog" role="log" aria-live="polite"></div>
   <div class="chips" id="askchips"></div>
+  <button id="chat-upsell" class="ghost" data-go="plans" type="button" hidden>See Premium plans</button>
   <form id="chatform" class="row cpform" autocomplete="off">
     <input id="q" maxlength="300" placeholder="Ask a question…" aria-label="Your question">
     <button class="primary big" id="ask" type="submit">Send</button>
@@ -242,8 +327,11 @@
   <p class="why">General information only, not medical advice. I will not diagnose or discuss medicines.</p>
 </section>
 
+<script src="vendor/leaflet/leaflet.js"></script>
 <script src="engine.js"></script>
 <script src="tips.js"></script>
+<script src="walk.js"></script>
+<script src="plans.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

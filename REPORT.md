@@ -82,7 +82,7 @@
 | F09 | Catch-up planning | **Build now, softened** | Missed walk shrinks tomorrow's goal instead of punishing |
 | F10 | Reports | **Build now (minimal)** | One-tap WhatsApp daily summary instead of PDFs |
 | F11 | Wearables | **Later** | D05 clunky; her phone and her voice suffice |
-| F12 | Subscription tiers | **Never** (for now) | Tiering a safety-adjacent product is wrong for this user; revisit after retention is proven |
+| F12 | Subscription tiers | **Build now as a demo, with no real payments**: Monthly Rs 599, 6 months Rs 1,299, Yearly Rs 7,999 | Reverses my earlier "Never". Kept safe by design: logging, rewards, digest and **all safety/emergency messages stay free**; Premium only lifts the free limits (5 AI questions a day, latest 3 saved walks). **Price warning:** as specified, yearly works out dearer per month (Rs 667) than monthly (Rs 599) and the 6-month plan (Rs 217); the app computes its "lowest per month" badge from the numbers instead of claiming yearly is best value. Evidence that would change my mind: if testers see the 5-question limit as unfair, or if Q1 shows price is a top reason for quitting (H2) |
 | F13 | Free consultation | **Later** | Needs doctors and liability |
 | F14 | Community activities | **Later** | Local partnerships can't be validated by one person |
 | F15 | Emergency: hospital | **Build now, minimal** | Red flag shows 112/108; no hospital integration (liability) |
@@ -94,6 +94,8 @@
 | New | Personal data -> protein target | **Build now** | Range from age, weight and activity (0.8-1.0 g/kg under 65, 1.0-1.2 g/kg at 65+); hidden if the user says their doctor limited protein |
 | New | Daily health digest | **Build now**, as *curated tips*, not news | 31 general tips, 3 a day, reordered by what the user is behind on; I cannot vouch for live news feeds, so I did not fake one |
 | New | Voice input | **Build now** | Research hypothesis: typing is the barrier |
+| New | Walk map (GPS route, distance, time, steps) | **Build now** | The brief asked for it; GPS fixes are filtered (accuracy, jitter, jumps) and routes are stored only on the phone; a made-up demo walk is provided for desks and reviewers |
+| New | Rewards: 10,000 steps a day = 100 points, streak bonuses, badges | **Build now** | Points can only be spent on in-app Premium days (no cash value, no partner discounts, which I cut with F05). 10,000 is shown as a popular target, not a medical one; the adaptive daily goal still follows the person's real week |
 | New | Water tracker (tap +/- glass) | **Build now** | Doctor's advice for the customer; one tap beats typing |
 | New | AI assistant chat (multi-turn, tool-using agent) | **Build now** | Answers questions about her own day; refuses medical/medicine questions |
 | New | BP / sugar logging with doctor-alerts | **Build now** | Customer's real routine; thresholds are conservative and non-diagnostic |
@@ -107,6 +109,8 @@ Screenshots: `docs/screenshots/` (1-welcome, 2-daily, 3-red-flag, 4-english).
 1. *Chatbot vs. one input box.* Weighed flexibility against the verbosity risk (H4) and confusion for a 63-year-old. Chose one box + <= 2-sentence replies. **Would change if** testers keep asking follow-up questions the box can't answer.
 2. *Safety by code, not by model.* Weighed a smarter model-only approach against its non-determinism. Chose regex-first, model-escalate-only, accepting false alarms and misses on unusual phrasing (case 14 shows the risk). **Would change if** live tests show frequent false alarms that make users ignore the red message.
 3. *No accounts, data stays on the phone.* Weighed multi-device sync and family dashboards against the brief's no-sign-up rule and privacy (D07). Chose localStorage + share button. **Would change if** the family-caregiver need turns out to be the stronger customer in Q1.
+
+**Privacy note for location (D07).** Walk routes are the most sensitive data in the app. They are requested only when the user taps Start, are never sent to a server, are stored on the phone only, and are removed by "Erase all my notes". The map picture itself loads from OpenStreetMap, which sees tile requests but not the route.
 
 ## Q5. Build it (14)
 - **Live link:** `TODO`. Static UI + `api/coach.js`; key only in host env; demo mode when no key/connectivity (D08).

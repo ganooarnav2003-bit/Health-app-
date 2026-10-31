@@ -1,19 +1,21 @@
 (function () {
   'use strict';
-  const E = window.HealthEngine, TP = window.HealthTips;
+  const E = window.HealthEngine, TP = window.HealthTips, W = window.HealthWalk, PL = window.HealthPlans;
   const KEY = 'dinchariya.v1';
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
   const GLASS_ML = 250;
   const COLORS = { kcal: '#f2b84b', prot: '#ff8f7a', water: '#4cc9f0', steps: '#2fd46b' };
 
+  let map = null, line = null, startM = null, endM = null, tracking = null;
   let chatOpen = false, live = false, view = 'home', metric = 'steps', tipCat = 'all', tipsOpen = false;
   let st = load();
 
   function load() {
-    try { const s = JSON.parse(localStorage.getItem(KEY)) || {}; return { profile: s.profile || null, entries: s.entries || [], chat: s.chat || [] }; }
-    catch (e) { return { profile: null, entries: [], chat: [] }; }
+    try { const s = JSON.parse(localStorage.getItem(KEY)) || {}; return { profile: s.profile || null, entries: s.entries || [], chat: s.chat || [], plan: s.plan || null, redeemed: s.redeemed || [], ai: s.ai || null }; }
+    catch (e) { return blank(); }
   }
+  function blank() { return { profile: null, entries: [], chat: [], plan: null, redeemed: [], ai: null }; }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
   const dayKeyOffset = (off) => { const d = new Date(); d.setDate(d.getDate() + off); return E.dayKey(d); };
   const todayKey = () => E.dayKey(new Date());
@@ -39,6 +41,7 @@
   // ---------------- navigation ----------------
   function go(v, scrollId) {
     if (v === 'chat') { closeDrawer(true); openChat(); return; }
+    closeChat(true);
     view = v;
     $$('.view').forEach((el) => { el.hidden = el.dataset.view !== v; });
     $$('#tabbar button').forEach((b) => { b.classList.toggle('on', b.dataset.go === v); b.setAttribute('aria-current', b.dataset.go === v ? 'page' : 'false'); });
@@ -50,7 +53,7 @@
   }
   function openChat() {
     chatOpen = true; $('#chatpanel').hidden = false; $('#chat-fab').hidden = true; $('#chat-fab').setAttribute('aria-expanded', 'true');
-    $('#cp-sub').textContent = 'AI health assistant · ' + (live ? 'Live AI' : 'Demo mode');
+    updateChatMeta();
     renderChat(); setTimeout(() => $('#q').focus({ preventScroll: true }), 50);
   }
   function closeChat(silent) {
@@ -65,9 +68,9 @@
     if (!silent) $('#menu-btn').focus();
   }
   let toastT;
-  function toast(msg) {
+  function toast(msg, ms) {
     let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
-    t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 1800);
+    t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), ms || 1800);
   }
 
   // ---------------- rendering ----------------
@@ -134,6 +137,7 @@
     chart.setAttribute('aria-label', `${d.label} for the last 7 days: ` + days.map((x) => `${x.today ? 'today' : x.label} ${x.v}`).join(', '));
     $$('#metricchips button').forEach((b) => b.classList.toggle('on', b.dataset.m === metric));
 
+    renderRewardTile();
     const tip = TP.pickDaily(todayKey(), sum, g)[0];
     $('#teaser').innerHTML = '<span class="kick">Today\'s health digest</span><b></b><span></span>';
     $('#teaser').querySelector('b').textContent = tip.title; $('#teaser span:last-child').textContent = tip.body.length > 110 ? tip.body.slice(0, 108).replace(/\s+\S*$/, '') + '… Read more' : tip.body;
@@ -270,6 +274,10 @@
     if (view === 'track') renderTrack(g, sum);
     if (view === 'tips') renderTips(g, sum);
     if (view === 'me') renderMe(g, sum);
+    if (view === 'walk') renderWalk();
+    if (view === 'rewards') renderRewards();
+    if (view === 'plans') renderPlans();
+    renderPro(); updateChatMeta();
     if (chatOpen) renderChat(typing);
   }
 
@@ -302,7 +310,7 @@
     const r = await analyze(text, image);
     btn.disabled = false;
     const empty = !r.meals.length && !r.water && !r.walkMin && !r.steps && !r.walkSkipped && !r.bp && r.sugar == null && r.safety.level === 'none';
-    if (!empty) pushEntry({ text: r.safety.level === 'red' ? '' : text, meals: r.meals, water: r.water, walkMin: r.walkMin, steps: r.steps || 0, stepsEst: !!r.stepsEst, walkSkipped: r.walkSkipped, bp: r.bp, sugar: r.sugar, safety: r.safety });
+    if (!empty) withRewardCheck(() => pushEntry({ text: r.safety.level === 'red' ? '' : text, meals: r.meals, water: r.water, walkMin: r.walkMin, steps: r.steps || 0, stepsEst: !!r.stepsEst, walkSkipped: r.walkSkipped, bp: r.bp, sugar: r.sugar, safety: r.safety }));
     const after = sumOn(todayKey());
     if (!empty && r.safety.level !== 'red' && r.meals.some((m) => !m.skipped) && after.kcalHi) r.reply += ` Today so far: about ${fmt(after.kcalLo)}–${fmt(after.kcalHi)} kcal` + (after.protHi ? ` and ${after.protLo}–${after.protHi} g protein.` : '.');
     showReply(r); $('#say').value = ''; render();
@@ -336,8 +344,9 @@
   function addSteps(n, fromHome) {
     n = Math.round(+n);
     if (!(n >= 1 && n <= 40000)) { $('#walk-why').textContent = 'Please enter steps between 1 and 40,000.'; return; }
-    pushEntry({ quick: 'steps', steps: n, walkMin: Math.round(n / E.STEPS_PER_MIN) });
-    $('#steps-in').value = ''; toast(`Added ${fmt(n)} steps`); render();
+    toast(`Added ${fmt(n)} steps`);
+    withRewardCheck(() => pushEntry({ quick: 'steps', steps: n, walkMin: Math.round(n / E.STEPS_PER_MIN) })); // celebration toast replaces the plain one
+    $('#steps-in').value = ''; render();
   }
 
   // ---------------- profile ----------------
@@ -359,8 +368,17 @@
     const ctx = { summary: { water: sum.water, walkMin: sum.walkMin, steps: sum.steps, km: sum.km, kcalLo: sum.kcalLo, kcalHi: sum.kcalHi, protLo: sum.protLo, protHi: sum.protHi, meals: sum.meals.map((m) => m.name) },
       goals: { water: g.water, walk: g.walk, steps: g.steps, km: g.km, kcal: g.kcal, protein: g.protein }, history: history().map((x) => ({ date: x.date, walkMin: x.walkMin })) };
     const prior = st.chat.slice(-6).map((m) => ({ role: m.role, content: m.content }));
-    st.chat.push({ role: 'user', content: q }); renderChat(true);
     let r = E.answerQuery(q, ctx);
+    // Free plan: limited AI questions per day. Safety answers (red flags, symptoms, medicine) are NEVER limited or counted.
+    const exempt = r.safety.level !== 'none' || r.topic === 'medicine';
+    if (!isPrem() && !exempt) {
+      if (aiUsed() >= PL.FREE.aiPerDay) {
+        st.chat.push({ role: 'user', content: q }, { role: 'assistant', content: `You have used today's ${PL.FREE.aiPerDay} free questions. They reset tomorrow, or Premium gives unlimited questions. Emergency and safety help is always free.`, level: 'amber' });
+        st.chat = st.chat.slice(-30); save(); btn.disabled = false; renderChat(); updateChatMeta(); return;
+      }
+      st.ai = { day: todayKey(), n: aiUsed() + 1 }; save();
+    }
+    st.chat.push({ role: 'user', content: q }); renderChat(true);
     if (r.safety.level !== 'red' && r.topic !== 'medicine' && live) { // red flags and medicine never wait for the network
       try {
         const x = await fetch('api/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(20000), body: JSON.stringify({ question: q, context: ctx, history: prior }) });
@@ -369,22 +387,193 @@
     }
     st.chat.push({ role: 'assistant', content: r.answer, level: r.safety && r.safety.level });
     st.chat = st.chat.slice(-30); save();
-    btn.disabled = false; renderChat();
+    btn.disabled = false; renderChat(); updateChatMeta();
   }
 
   // ---------------- sample data ----------------
   function sampleWeek() {
     st.entries = st.entries.filter((e) => e.sample !== true);
-    const walks = [20, 15, 30, 5, 0, 12], waters = [5, 6, 4, 3, 2, 3];
+    const walks = [100, 96, 118, 5, 0, 12], stepsArr = [10800, 10200, 12400, 500, 0, 1200], waters = [5, 6, 4, 3, 2, 3]; // first three days reach 10,000 steps, so the reward streak is visible
     const mk = (name, qty, unit, kl, kh, pl, ph, slot) => ({ name, qty, unit, kcalLo: kl * qty, kcalHi: kh * qty, protLo: pl * qty, protHi: ph * qty, slot });
     walks.forEach((w, i) => {
       const d = new Date(); d.setDate(d.getDate() - (6 - i)); d.setHours(9, 0, 0, 0);
       const meals = [mk('roti', 2, 'pc', 70, 100, 2.5, 3.5, 'lunch'), mk('dal', 1, 'katori', 100, 150, 6, 9, 'lunch'), mk('sabzi', 1, 'katori', 80, 150, 1.5, 3, 'lunch')];
       if (i % 2 === 0) meals.push(mk('idli', 3, 'pc', 40, 60, 1.5, 2.5, 'breakfast'));
       if (i % 3 !== 1) meals.push(mk('curd', 1, 'katori', 60, 100, 3, 5, 'dinner'), mk('khichdi', 1, 'katori', 150, 220, 5, 8, 'dinner'));
-      st.entries.push({ id: 's' + i, ts: d.getTime(), sample: true, text: 'sample', meals, water: waters[i], walkMin: w, steps: w * E.STEPS_PER_MIN, walkSkipped: w === 0, safety: { level: 'none', reasons: [] } });
+      st.entries.push({ id: 's' + i, ts: d.getTime(), sample: true, text: 'sample', meals, water: waters[i], walkMin: w, steps: stepsArr[i], walkSkipped: w === 0, safety: { level: 'none', reasons: [] } });
     });
     save(); render(); toast('Sample week loaded');
+  }
+
+
+  // ---------------- plans, entitlements ----------------
+  const isPrem = () => PL.isPremium(st.plan);
+  const aiUsed = () => (st.ai && st.ai.day === todayKey() ? st.ai.n : 0);
+  function updateChatMeta() {
+    const left = Math.max(0, PL.FREE.aiPerDay - aiUsed());
+    const t = $('#cp-sub'); if (!t) return;
+    t.textContent = 'AI health assistant · ' + (live ? 'Live AI' : 'Demo mode') + (isPrem() ? ' · Premium' : ` · ${left} of ${PL.FREE.aiPerDay} free questions left today`);
+    $('#chat-upsell').hidden = isPrem() || left > 0;
+  }
+  function renderPro() {
+    const pro = isPrem(); $('#pro-chip').hidden = !pro;
+    const t = $('#d-plan-tag'); t.textContent = pro ? 'Premium' : 'Free'; t.classList.toggle('pro', pro);
+  }
+  const money = (n) => '₹' + Number(n).toLocaleString('en-IN');
+  const dateStr = (ts) => new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  function renderPlans() {
+    const box = $('#plan-status'), pro = isPrem();
+    box.className = 'card status' + (pro ? ' prem' : '');
+    const days = pro ? Math.ceil((st.plan.endsTs - Date.now()) / 86400000) : 0;
+    box.innerHTML = '<b></b><span></span>';
+    box.querySelector('b').textContent = pro ? '⭐ Premium is on' : 'You are on the Free plan';
+    box.querySelector('span').textContent = pro ? `Until ${dateStr(st.plan.endsTs)} (${days} day${days === 1 ? '' : 's'} left) · ${st.plan.source === 'reward' ? 'earned with your steps' : 'demo plan, nothing was charged'}` : 'Everything important is free. Premium adds unlimited AI questions and your full walk history.';
+    const best = PL.bestValueId(), wrap = $('#plan-cards'); wrap.innerHTML = '';
+    PL.PLANS.forEach((p) => {
+      const a = document.createElement('article'); a.className = 'plan' + (p.id === best ? ' best' : '');
+      a.innerHTML = (p.id === best ? '<span class="pbadge">Lowest per month</span>' : '') + '<h3></h3><div class="price"></div><div class="per"></div><button class="primary big" type="button"></button>';
+      a.querySelector('h3').textContent = p.name;
+      a.querySelector('.price').textContent = money(p.price);
+      a.querySelector('.per').textContent = `${money(PL.perMonth(p))} per month · ${p.months === 1 ? 'billed every month' : `${p.months} months paid at once`}`;
+      const b = a.querySelector('button'); b.textContent = pro ? 'Add this plan (demo)' : 'Start Premium (demo)';
+      b.onclick = () => {
+        if (!confirm(`Demo only: no payment is taken. Switch on Premium (${p.name}, ${money(p.price)}) on this phone?`)) return;
+        st.plan = PL.activate(st.plan, p.id); save(); toast('Premium is on (demo)'); render();
+      };
+      wrap.appendChild(a);
+    });
+    $('#plan-cancel').hidden = !pro;
+  }
+
+  // ---------------- rewards ----------------
+  function stepsByDay() { const m = {}; st.entries.forEach((e) => { if (e.steps) { const k = E.dayKey(e.ts); m[k] = (m[k] || 0) + e.steps; } }); return m; }
+  const rewards = () => PL.rewardSummary(stepsByDay(), todayKey(), st.redeemed);
+  function withRewardCheck(fn) {
+    const before = rewards().earned; fn(); const after = rewards().earned;
+    if (after > before) toast(`🎉 10,000 steps reached! +${after - before} points`, 4000);
+  }
+  function renderRewardTile() {
+    const r = rewards(), el = $('#rewardcard');
+    el.innerHTML = '<b></b><div class="bar"><i></i></div><span></span>';
+    el.querySelector('b').textContent = '🏆 10,000-step reward';
+    el.querySelector('i').style.width = Math.min(100, (r.todaySteps / PL.REWARD.target) * 100) + '%';
+    el.querySelector('span').textContent = (r.todayDone ? `Done! +${PL.REWARD.points} points earned today.` : `${fmt(r.toGo)} steps to go for +${PL.REWARD.points} points.`) + ` You have ${fmt(Math.max(0, r.balance))} points.`;
+  }
+  function renderRewards() {
+    const r = rewards(), bal = Math.max(0, r.balance);
+    $('#rw-steps').textContent = `${fmt(r.todaySteps)} / ${fmt(PL.REWARD.target)}`;
+    $('#rw-sub').textContent = r.todayDone ? 'steps today · reward earned! 🎉' : `steps today · ${fmt(r.toGo)} to go`;
+    $('#rw-bar').style.width = Math.min(100, (r.todaySteps / PL.REWARD.target) * 100) + '%';
+    $('#rw-bal').textContent = fmt(bal); $('#rw-streak').textContent = r.streak;
+    const nb = r.nextBonus; $('#rw-next').textContent = nb ? `Keep going: ${nb - r.streak} more day${nb - r.streak === 1 ? '' : 's'} at 10,000 steps for a +${PL.REWARD.streakBonus[nb]} bonus (${nb}-day streak).` : 'You have reached every streak bonus. Great work!';
+    const ul = $('#rw-badges'); ul.innerHTML = '';
+    const ico = { first: '👟', s3: '🔥', s7: '🏅', d30: '🏆' };
+    r.badges.forEach((b) => { const li = document.createElement('li'); li.className = b.got ? 'got' : ''; li.innerHTML = '<span></span><div></div>'; li.firstChild.textContent = ico[b.id]; li.lastChild.textContent = b.label + (b.got ? '' : ' (locked)'); ul.appendChild(li); });
+    const rd = $('#rw-redeem'); rd.innerHTML = '';
+    PL.REDEEM.forEach((o) => {
+      const d = document.createElement('div'); d.className = 'redeem'; d.innerHTML = '<div><b></b><small></small></div><button type="button"></button>';
+      d.querySelector('b').textContent = o.label; d.querySelector('small').textContent = `${o.cost} points`;
+      const b = d.querySelector('button'); b.textContent = 'Redeem'; b.disabled = bal < o.cost;
+      b.onclick = () => { if (!confirm(`Spend ${o.cost} points on ${o.label}?`)) return; st.redeemed.push({ ts: Date.now(), cost: o.cost, label: o.label, days: o.days }); st.plan = PL.extendDays(st.plan, o.days); save(); $('#rw-msg').textContent = `Done: ${o.label} added. Premium now runs until ${dateStr(st.plan.endsTs)}.`; render(); };
+      rd.appendChild(d);
+    });
+    if (!$('#rw-msg').textContent) $('#rw-msg').textContent = 'Points can only be spent on in-app Premium days. Nothing here has cash value.';
+  }
+
+  // ---------------- walk map ----------------
+  function ensureMap() {
+    const el = $('#map');
+    if (map) return true;
+    if (!window.L) { el.classList.add('nomap'); el.textContent = 'The map could not load. Your route and distance are still recorded.'; return false; }
+    map = L.map(el, { zoomControl: true }).setView([20.5937, 78.9629], 4);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
+    line = L.polyline([], { color: '#2fd46b', weight: 6, opacity: 0.95 }).addTo(map);
+    return true;
+  }
+  function drawRoute(pts, fit) {
+    if (!ensureMap()) return;
+    const ll = pts.map((p) => [p.lat, p.lng]); line.setLatLngs(ll);
+    if (startM) { map.removeLayer(startM); startM = null; } if (endM) { map.removeLayer(endM); endM = null; }
+    if (ll.length) {
+      startM = L.circleMarker(ll[0], { radius: 7, color: '#fff', weight: 2, fillColor: '#4cc9f0', fillOpacity: 1 }).addTo(map);
+      endM = L.circleMarker(ll[ll.length - 1], { radius: 9, color: '#fff', weight: 3, fillColor: '#2fd46b', fillOpacity: 1 }).addTo(map);
+    }
+    if (fit && ll.length > 1) map.fitBounds(W.bounds(pts), { padding: [28, 28], maxZoom: 18 }); else if (ll.length) map.panTo(ll[ll.length - 1]);
+  }
+  function setReadout(km, sec, steps) { $('#m-km').textContent = km.toFixed(2); $('#m-time').textContent = W.fmtDuration(sec); $('#m-steps').textContent = fmt(steps); }
+  function updateLive() {
+    const t = tracking; if (!t) return;
+    const pts = t.points, first = pts[0], last = pts[pts.length - 1];
+    const start = t.source === 'demo' && first ? first.ts : t.startTs, end = t.source === 'demo' && last ? last.ts : Date.now();
+    const s = W.stats(pts, start, end, E.STEP_KM); setReadout(s.km, (end - start) / 1000, s.steps);
+  }
+  function onFix(p) {
+    const t = tracking; if (!t) return;
+    const r = W.accept(t.points[t.points.length - 1], p);
+    if (!r.ok) { if (r.reason === 'accuracy') $('#walk-msg').textContent = 'Waiting for a stronger GPS signal…'; return; }
+    t.points.push(p);
+    if (t.points.length === 1 && map) map.setView([p.lat, p.lng], 17);
+    $('#walk-msg').textContent = ''; drawRoute(t.points, false); updateLive();
+  }
+  function walkUI(on) { $('#walk-start').hidden = on; $('#walk-stop').hidden = !on; $('#walk-demo').disabled = on; }
+  function startTracking(source) {
+    if (tracking) return;
+    ensureMap(); if (map) map.invalidateSize();
+    if (source === 'gps' && !navigator.geolocation) { $('#walk-msg').textContent = 'This browser cannot share your location. Try the demo walk instead.'; return; }
+    tracking = { points: [], startTs: Date.now(), source, timer: null, watch: null, demo: null, wake: null };
+    drawRoute([], false); setReadout(0, 0, 0); walkUI(true); $('#walk-msg').textContent = source === 'gps' ? 'Looking for your location…' : 'Demo walk: a made-up route is being drawn.';
+    tracking.timer = setInterval(updateLive, 1000);
+    if (source === 'gps') {
+      tracking.watch = navigator.geolocation.watchPosition((pos) => onFix({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy, ts: pos.timestamp || Date.now() }), (err) => {
+        const m = { 1: 'Location is switched off for this site. Allow it in your browser settings, or try the demo walk.', 2: 'I cannot find your location. Try going outside.', 3: 'Finding your location is taking long. Try again outside.' };
+        $('#walk-msg').textContent = m[err.code] || 'Location error.'; if (err.code === 1) stopTracking(true);
+      }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+      try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then((w) => { if (tracking) tracking.wake = w; else w.release(); }).catch(() => {}); } catch (e) {}
+    } else {
+      const pts = W.demoRoute(null, 120); let i = 0;
+      tracking.demo = setInterval(() => { if (i >= pts.length) { stopTracking(false); return; } onFix({ ...pts[i++] }); }, 35);
+    }
+  }
+  function stopTracking(discard) {
+    const t = tracking; if (!t) return;
+    clearInterval(t.timer); clearInterval(t.demo); if (t.watch != null) navigator.geolocation.clearWatch(t.watch); try { if (t.wake) t.wake.release(); } catch (e) {}
+    tracking = null; walkUI(false);
+    const pts = t.points;
+    if (discard === true && !pts.length) return;
+    const first = pts[0], last = pts[pts.length - 1];
+    const start = t.source === 'demo' && first ? first.ts : t.startTs, end = t.source === 'demo' && last ? last.ts : Date.now();
+    const s = W.stats(pts, start, end, E.STEP_KM);
+    if (W.lengthM(pts) < 30) { $('#walk-msg').textContent = 'That walk was very short (under 30 m), so I did not save it.'; return; }
+    const route = W.downsample(pts, 150).map((p) => ({ lat: +p.lat.toFixed(5), lng: +p.lng.toFixed(5) }));
+    withRewardCheck(() => pushEntry({ quick: 'gps', demo: t.source === 'demo', route, km: s.km, steps: s.steps, walkMin: Math.max(1, Math.round(s.minutes)) }));
+    drawRoute(pts, true); setReadout(s.km, (end - start) / 1000, s.steps);
+    $('#walk-msg').textContent = `Saved: ${s.km.toFixed(2)} km, ${Math.max(1, Math.round(s.minutes))} min, about ${fmt(s.steps)} steps.` + (t.source === 'demo' ? ' (Demo walk: made-up steps were added.)' : '');
+    render();
+  }
+  function showWalk(e) {
+    ensureMap(); if (map) map.invalidateSize(); drawRoute(e.route, true);
+    setReadout(e.km || 0, (e.walkMin || 0) * 60, e.steps || 0);
+    $('#walk-msg').textContent = `Showing your walk from ${new Date(e.ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.`;
+    $('#mapcard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function renderWalk() {
+    $('#map-note').textContent = 'Map pictures need internet. Without it, your route is still drawn on a plain background.';
+    if (ensureMap()) setTimeout(() => map.invalidateSize(), 50);
+    const all = st.entries.filter((e) => e.route && e.route.length).sort((a, b) => b.ts - a.ts);
+    const shown = isPrem() ? all : all.slice(0, PL.FREE.walkHistory), hidden = all.length - shown.length;
+    const ul = $('#walklist'); ul.innerHTML = ''; $('#walk-empty').hidden = all.length > 0;
+    shown.forEach((e) => {
+      const li = document.createElement('li'), d = document.createElement('div');
+      d.innerHTML = '<div class="t"></div><div class="b"></div>';
+      d.querySelector('.t').textContent = new Date(e.ts).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      d.querySelector('.b').textContent = `${(e.km || 0).toFixed(2)} km · ${e.walkMin} min · ${fmt(e.steps)} steps${e.demo ? ' · demo' : ''}`;
+      const box = document.createElement('div'); box.className = 'rowbtns';
+      const m = document.createElement('button'); m.type = 'button'; m.textContent = '🗺'; m.setAttribute('aria-label', 'Show this walk on the map'); m.onclick = () => showWalk(e);
+      const x = document.createElement('button'); x.type = 'button'; x.textContent = '🗑'; x.setAttribute('aria-label', 'Delete this walk');
+      x.onclick = () => { if (confirm('Delete this walk and its route?')) { st.entries = st.entries.filter((y) => y.id !== e.id); save(); render(); } };
+      box.append(m, x); li.append(d, box); ul.appendChild(li);
+    });
+    const lock = $('#walk-lock'); lock.hidden = hidden <= 0; lock.textContent = `🔒 ${hidden} older walk${hidden === 1 ? ' is' : 's are'} on Premium. See plans`;
   }
 
   // ---------------- wiring ----------------
@@ -418,6 +607,11 @@
     const b = document.createElement('button'); b.type = 'button'; b.dataset.m = k; b.textContent = label; b.onclick = () => { metric = k; render(); }; $('#metricchips').appendChild(b);
   });
 
+  $('#walk-start').onclick = () => startTracking('gps');
+  $('#walk-stop').onclick = () => stopTracking(false);
+  $('#walk-demo').onclick = () => startTracking('demo');
+  $('#plan-cancel').onclick = () => { if (confirm('Switch back to the Free plan? Any remaining Premium days on this phone will be removed.')) { st.plan = null; save(); render(); toast('Back on the Free plan'); } };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && tracking && tracking.source === 'gps') $('#walk-msg').textContent = 'Tracking can pause when the screen is off, so the distance may be a little short.'; });
   $('#q-water').onclick = () => addWater(1);
   $('#q-steps').onclick = () => addSteps(1000);
   $('#q-log').onclick = () => { go('track', 'logcard'); setTimeout(() => $('#say').focus({ preventScroll: true }), 350); };
@@ -459,7 +653,7 @@
   };
 
   const share = () => { const txt = E.familySummary(st.profile.name, sumOn(todayKey()), goals(), 'en'); closeDrawer(true); window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener'); };
-  const reset = () => { closeDrawer(true); closeChat(true); if (confirm('Erase everything on this phone?')) { localStorage.removeItem(KEY); st = { profile: null, entries: [], chat: [] }; view = 'home'; $('#reply').hidden = true; render(); window.scrollTo(0, 0); } };
+  const reset = () => { closeDrawer(true); closeChat(true); if (confirm('Erase everything on this phone? This also removes saved walk routes, points and any Premium on this phone.')) { localStorage.removeItem(KEY); st = blank(); view = 'home'; $('#reply').hidden = true; render(); window.scrollTo(0, 0); } };
   const sample = () => { closeDrawer(true); sampleWeek(); };
   $('#share').onclick = share; $('#d-share').onclick = share;
   $('#reset').onclick = reset; $('#d-reset').onclick = reset;
