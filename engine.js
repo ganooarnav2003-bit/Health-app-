@@ -377,7 +377,7 @@
   }
 
   const NUDGE = {
-    breakfast: { en: 'Good morning. Tell me what you had for breakfast: just say it, any language.', hi: 'Suprabhat. Nashte mein kya liya? Bas bol dijiye, kisi bhi bhasha mein.' },
+    breakfast: { en: 'Good morning. Tell me what you had for breakfast: just say it in your own words.', hi: 'Suprabhat. Nashte mein kya liya? Bas bol dijiye, kisi bhi bhasha mein.' },
     water: (n, g) => ({ en: `Only ${n} glass of water so far. One glass now?`, hi: `Abhi tak sirf ${n} glass paani. Ek glass abhi?` }),
     walk: (g, shrunk) => ({
       en: `Walk is still pending. ${g} minutes is enough today${shrunk ? ' (I made it smaller to match your week)' : ''}.`,

@@ -162,3 +162,23 @@ select{width:100%;font:inherit;padding:12px;border:2px solid var(--line);border-
 .ringtile{flex-direction:column;align-items:flex-start;gap:8px;min-height:0;padding:12px}
 .ringwrap,.ring{width:56px;height:56px}.ringwrap .ico{font-size:1.15rem}
 .rtx{width:100%}.rv{font-size:1.2rem;white-space:nowrap}.rs{white-space:normal}
+
+/* ================= AI assistant: left-side launcher + panel ================= */
+.tabbar{grid-template-columns:repeat(4,1fr)}
+.botlogo{display:inline-flex;width:40px;height:40px;flex:none}.botlogo svg{width:100%;height:100%}
+.botlogo.big{width:46px;height:46px;background:#000;border:2px solid var(--pri);border-radius:14px;padding:4px}
+.fab{position:fixed;left:12px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:35;display:flex;align-items:center;gap:8px;min-height:60px;padding:6px 16px 6px 8px;border-radius:99px;background:#000;border:2px solid var(--pri);color:var(--ink);box-shadow:0 0 22px rgba(47,212,107,.4),0 6px 18px rgba(0,0,0,.6)}
+.fab .botlogo{width:44px;height:44px;background:#0b2415;border-radius:50%;padding:7px}
+.faglabel{font-weight:700;color:var(--pri);font-size:.95rem}
+.chatpanel{position:fixed;left:8px;bottom:calc(72px + env(safe-area-inset-bottom));z-index:45;width:min(calc(100vw - 16px),430px);height:min(76vh,600px);display:flex;flex-direction:column;background:#0b120d;border:2px solid var(--pri);border-radius:20px;padding:10px 12px 12px;box-shadow:0 10px 40px rgba(0,0,0,.75),0 0 24px rgba(47,212,107,.25)}
+.cphead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.cptitle{flex:1;min-width:0}.cptitle h2{margin:0;font-size:1.05rem;line-height:1.2}.cpsub{display:block;font-size:.8rem;color:var(--mut);line-height:1.3}
+.chatpanel .chatlog{flex:1;max-height:none;min-height:0}
+.chatpanel .chatlog:empty{display:flex;flex:1}
+.chatpanel .chatlog:empty::before{content:"Hi! I can read your day and answer simple questions about water, steps, food and protein.";color:var(--mut);padding:10px;font-size:.95rem}
+.chatpanel .chips{margin:4px 0}.chatpanel .chips button{min-height:40px}
+.cpform{margin-top:4px}
+.msg.bot{position:relative}
+
+.fab{transition:padding .2s}.fab.compact{padding:6px;gap:0}.fab.compact .faglabel{display:none}
+.cptitle h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

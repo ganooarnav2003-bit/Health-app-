@@ -78,7 +78,7 @@
 | F05 | Progress tracker | **Build now** (water/walk/food tiles) | Fasting tracker, supplements and reward points: **Never** (selling products to patients is a conflict of interest) |
 | F06 | Sleep tracking | **Later** | Not in the customer's doctor's advice; adds input burden |
 | F07 | Challenges, motivational videos | **Never** | Licensing (D09), and streak pressure is a known churn/guilt cause |
-| F08 | AI health coach chatbot | **Build now, reshaped** | Not an open chat: one input box, short reply, proactive nudge |
+| F08 | AI health coach chatbot | **Build now, reshaped** | A floating bot button on the left of every screen opens "Dina", a short-answer assistant that reads the user's own day; it is not an open chat, never diagnoses, and sends emergencies to 112 |
 | F09 | Catch-up planning | **Build now, softened** | Missed walk shrinks tomorrow's goal instead of punishing |
 | F10 | Reports | **Build now (minimal)** | One-tap WhatsApp daily summary instead of PDFs |
 | F11 | Wearables | **Later** | D05 clunky; her phone and her voice suffice |

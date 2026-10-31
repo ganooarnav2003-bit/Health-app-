@@ -7,7 +7,7 @@
   const GLASS_ML = 250;
   const COLORS = { kcal: '#f2b84b', prot: '#ff8f7a', water: '#4cc9f0', steps: '#2fd46b' };
 
-  let live = false, view = 'home', metric = 'steps', tipCat = 'all', tipsOpen = false;
+  let chatOpen = false, live = false, view = 'home', metric = 'steps', tipCat = 'all', tipsOpen = false;
   let st = load();
 
   function load() {
@@ -38,6 +38,7 @@
 
   // ---------------- navigation ----------------
   function go(v, scrollId) {
+    if (v === 'chat') { closeDrawer(true); openChat(); return; }
     view = v;
     $$('.view').forEach((el) => { el.hidden = el.dataset.view !== v; });
     $$('#tabbar button').forEach((b) => { b.classList.toggle('on', b.dataset.go === v); b.setAttribute('aria-current', b.dataset.go === v ? 'page' : 'false'); });
@@ -46,6 +47,16 @@
     render();
     const target = scrollId && document.getElementById(scrollId);
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); else window.scrollTo(0, 0);
+  }
+  function openChat() {
+    chatOpen = true; $('#chatpanel').hidden = false; $('#chat-fab').hidden = true; $('#chat-fab').setAttribute('aria-expanded', 'true');
+    $('#cp-sub').textContent = 'AI health assistant · ' + (live ? 'Live AI' : 'Demo mode');
+    renderChat(); setTimeout(() => $('#q').focus({ preventScroll: true }), 50);
+  }
+  function closeChat(silent) {
+    if (!chatOpen) return;
+    chatOpen = false; $('#chatpanel').hidden = true; $('#chat-fab').hidden = !st.profile; $('#chat-fab').setAttribute('aria-expanded', 'false');
+    if (!silent) $('#chat-fab').focus();
   }
   function openDrawer() { $('#drawer').classList.add('open'); $('#drawer').inert = false; $('#scrim').hidden = false; $('#menu-btn').setAttribute('aria-expanded', 'true'); $('#menu-btn').setAttribute('aria-label', 'Close menu'); const f = $('#drawer button[data-go]'); if (f) f.focus(); }
   function closeDrawer(silent) {
@@ -250,6 +261,7 @@
   function render(typing) {
     const has = !!st.profile;
     $('#onboard').hidden = has; $('#main').hidden = !has; $('#appbar').hidden = !has; $('#tabbar').hidden = !has;
+    $('#chat-fab').hidden = !has || chatOpen; if (!has && chatOpen) closeChat(true);
     if (!has) return;
     const g = goals(), sum = sumOn(todayKey());
     $('#d-name').textContent = (st.profile.name || 'Menu'); $('#d-sub').textContent = live ? 'Live AI' : 'Demo mode';
@@ -258,7 +270,7 @@
     if (view === 'track') renderTrack(g, sum);
     if (view === 'tips') renderTips(g, sum);
     if (view === 'me') renderMe(g, sum);
-    if (view === 'chat') renderChat(typing);
+    if (chatOpen) renderChat(typing);
   }
 
   // ---------------- logging by text / voice / photo ----------------
@@ -383,7 +395,10 @@
   $('#menu-btn').onclick = () => ($('#drawer').classList.contains('open') ? closeDrawer() : openDrawer());
   $('#menu-close').onclick = () => closeDrawer();
   $('#scrim').onclick = () => closeDrawer();
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+  $('#chat-fab').onclick = openChat;
+  window.addEventListener('scroll', () => $('#chat-fab').classList.toggle('compact', window.scrollY > 60), { passive: true }); // label hides while scrolling so the button covers less text
+  $('#chat-close').onclick = () => closeChat();
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if ($('#drawer').classList.contains('open')) closeDrawer(); else closeChat(); } });
 
   $('#start').onclick = () => { st.profile = { name: $('#name').value.trim() }; save(); go('home'); };
   $('#send').onclick = () => submit($('#say').value);
@@ -406,7 +421,7 @@
   $('#q-water').onclick = () => addWater(1);
   $('#q-steps').onclick = () => addSteps(1000);
   $('#q-log').onclick = () => { go('track', 'logcard'); setTimeout(() => $('#say').focus({ preventScroll: true }), 350); };
-  $('#q-ask').onclick = () => { go('chat'); setTimeout(() => $('#q').focus({ preventScroll: true }), 100); };
+  $('#q-ask').onclick = openChat;
   $('#kgoal-set').onclick = setKcalGoal;
   $('#kgoal').addEventListener('keydown', (e) => { if (e.key === 'Enter') setKcalGoal(); });
   $('#w-plus').onclick = () => addWater(1);
@@ -444,7 +459,7 @@
   };
 
   const share = () => { const txt = E.familySummary(st.profile.name, sumOn(todayKey()), goals(), 'en'); closeDrawer(true); window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener'); };
-  const reset = () => { closeDrawer(true); if (confirm('Erase everything on this phone?')) { localStorage.removeItem(KEY); st = { profile: null, entries: [], chat: [] }; view = 'home'; $('#reply').hidden = true; render(); window.scrollTo(0, 0); } };
+  const reset = () => { closeDrawer(true); closeChat(true); if (confirm('Erase everything on this phone?')) { localStorage.removeItem(KEY); st = { profile: null, entries: [], chat: [] }; view = 'home'; $('#reply').hidden = true; render(); window.scrollTo(0, 0); } };
   const sample = () => { closeDrawer(true); sampleWeek(); };
   $('#share').onclick = share; $('#d-share').onclick = share;
   $('#reset').onclick = reset; $('#d-reset').onclick = reset;

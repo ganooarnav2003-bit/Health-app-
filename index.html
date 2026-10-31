@@ -165,21 +165,6 @@
       </section>
     </section>
 
-    <!-- CHAT -->
-    <section id="v-chat" class="view" data-view="chat" hidden>
-      <h1 class="vtitle">AI assistant</h1>
-      <section class="card" id="chatcard" aria-labelledby="h-chat">
-        <div class="thead"><h2 id="h-chat">🤖 Ask me anything about your day</h2><button id="chat-clear" class="ghost mini" type="button">Clear</button></div>
-        <div id="chatlog" class="chatlog tall" role="log" aria-live="polite"></div>
-        <div class="chips" id="askchips"></div>
-        <form id="chatform" class="row" autocomplete="off">
-          <input id="q" maxlength="300" placeholder="Ask a question…" aria-label="Your question">
-          <button class="primary big" id="ask" type="submit">Send</button>
-        </form>
-        <p class="why">General information only, not medical advice. It will not diagnose or discuss medicines.</p>
-      </section>
-    </section>
-
     <!-- DAILY DIGEST -->
     <section id="v-tips" class="view" data-view="tips" hidden>
       <h1 class="vtitle">Daily health digest</h1>
@@ -233,10 +218,29 @@
 <nav id="tabbar" class="tabbar" aria-label="Sections" hidden>
   <button data-go="home" type="button"><i>📊</i><span>Home</span></button>
   <button data-go="track" type="button"><i>🍽</i><span>Track</span></button>
-  <button data-go="chat" type="button"><i>🤖</i><span>Assistant</span></button>
   <button data-go="tips" type="button"><i>📰</i><span>Digest</span></button>
   <button data-go="me" type="button"><i>👤</i><span>Me</span></button>
 </nav>
+
+<button id="chat-fab" class="fab" type="button" aria-label="Open AI health assistant" aria-expanded="false" aria-controls="chatpanel" hidden>
+  <span class="botlogo"><svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="4" y="22" width="4" height="9" rx="2" fill="#2fd46b"/><rect x="40" y="22" width="4" height="9" rx="2" fill="#2fd46b"/><path d="M24 11v3" stroke="#2fd46b" stroke-width="2.4" stroke-linecap="round"/><circle cx="24" cy="8" r="3" fill="#2fd46b"/><rect x="9" y="14" width="30" height="24" rx="9" fill="#2fd46b"/><circle cx="18" cy="25" r="3.2" fill="#04140a"/><circle cx="30" cy="25" r="3.2" fill="#04140a"/><path d="M19 32c1.4 1.6 3.2 2.4 5 2.4s3.6-.8 5-2.4" stroke="#04140a" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg></span><span class="faglabel">Ask AI</span>
+</button>
+
+<section id="chatpanel" class="chatpanel" role="dialog" aria-modal="false" aria-labelledby="h-chat" hidden>
+  <header class="cphead">
+    <span class="botlogo big"><svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="4" y="22" width="4" height="9" rx="2" fill="#2fd46b"/><rect x="40" y="22" width="4" height="9" rx="2" fill="#2fd46b"/><path d="M24 11v3" stroke="#2fd46b" stroke-width="2.4" stroke-linecap="round"/><circle cx="24" cy="8" r="3" fill="#2fd46b"/><rect x="9" y="14" width="30" height="24" rx="9" fill="#2fd46b"/><circle cx="18" cy="25" r="3.2" fill="#04140a"/><circle cx="30" cy="25" r="3.2" fill="#04140a"/><path d="M19 32c1.4 1.6 3.2 2.4 5 2.4s3.6-.8 5-2.4" stroke="#04140a" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg></span>
+    <div class="cptitle"><h2 id="h-chat">Dina</h2><span class="cpsub" id="cp-sub">AI health assistant · Demo mode</span></div>
+    <button id="chat-clear" class="ghost mini" type="button">Clear</button>
+    <button id="chat-close" class="mini" type="button" aria-label="Close assistant">✕</button>
+  </header>
+  <div id="chatlog" class="chatlog" role="log" aria-live="polite"></div>
+  <div class="chips" id="askchips"></div>
+  <form id="chatform" class="row cpform" autocomplete="off">
+    <input id="q" maxlength="300" placeholder="Ask a question…" aria-label="Your question">
+    <button class="primary big" id="ask" type="submit">Send</button>
+  </form>
+  <p class="why">General information only, not medical advice. I will not diagnose or discuss medicines.</p>
+</section>
 
 <script src="engine.js"></script>
 <script src="tips.js"></script>
