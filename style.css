@@ -83,6 +83,12 @@ button:disabled{opacity:.55}
 .appbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 14px;background:rgba(0,0,0,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .brandrow{display:flex;align-items:center;gap:10px}.mini-logo{width:34px;height:34px;display:block}
 .brandname{font-weight:750;font-size:1.1rem;letter-spacing:.01em}
+.barbtns{display:flex;align-items:center;gap:2px}
+.iconbtn{width:46px;height:46px;min-height:46px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:14px;background:transparent;border-color:transparent;color:var(--pri)}
+.iconbtn svg{width:24px;height:24px}
+.iconbtn.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.iconbtn.spin svg{animation:none;opacity:.5}}
 .menu{width:48px;height:48px;min-height:48px;padding:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;border-radius:14px;background:transparent}
 .menu span{display:block;width:24px;height:3px;border-radius:3px;background:var(--pri);transition:transform .2s,opacity .2s}
 .menu[aria-expanded="true"] span:nth-child(1){transform:translateY(9px) rotate(45deg)}
@@ -216,3 +222,11 @@ select{width:100%;font:inherit;padding:12px;border:2px solid var(--line);border-
 
 .cptitle h2 .role{display:block;font-size:.8rem;font-weight:500;color:var(--mut);white-space:normal}
 .cphead .mini{padding:4px 9px}.cphead{gap:8px}
+
+/* top bar stays on one line, even on 360px phones with the Premium badge */
+.mini-logo{flex:none}.brandrow{min-width:0}
+.brandname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.prochip b{font-weight:800}.prochip::before{content:"★";display:none}
+@media (max-width:380px){.brandname{font-size:.95rem}.prochip{margin-left:5px;padding:2px 7px}.prochip b{display:none}.prochip::before{display:inline}.brandrow{gap:8px}}
+@media (max-width:380px){.brandname{font-size:.86rem}.iconbtn{width:42px;height:42px;min-height:42px}.menu{width:44px;height:44px;min-height:44px}.appbar{padding:0 10px}.mini-logo{width:30px;height:30px}.prochip{padding:2px 6px;margin-left:4px}}
+@media (min-width:381px) and (max-width:440px){.brandname{font-size:.95rem}}

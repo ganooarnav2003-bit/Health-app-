@@ -2,7 +2,7 @@
 
 **Live app:** `TODO: paste your deployed link here` (Vercel = live AI + demo fallback; GitHub Pages = demo mode only)
 
-Say your day in plain English ("2 roti, dal, 1 glass water, 15 min walk"). The AI turns it into a log, adapts your walking goal to what you actually do, and nudges you at the right time. Ask **Buddy Guide**, the AI assistant (the bot button on the left of every screen), about your water, steps, food and protein. No forms, no sign-up, nothing to install.
+Say your day in plain English ("2 roti, dal, 1 glass water, 15 min walk"). The AI turns it into a log, adapts your walking goal to what you actually do, and nudges you at the right time. Ask **Buddy Guide**, the AI assistant (the bot button on the left of every screen), about your water, steps, food and protein. No forms, no sign-up, nothing to install. A refresh button (top bar or menu) brings the day, nudges and live-AI status up to date without reloading the page.
 
 > Not medical advice. Made-up data only. The app never diagnoses or prescribes and sends red-flag symptoms to 112.
 

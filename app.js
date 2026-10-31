@@ -7,6 +7,7 @@
   const GLASS_ML = 250;
   const COLORS = { kcal: '#f2b84b', prot: '#ff8f7a', water: '#4cc9f0', steps: '#2fd46b' };
 
+  let lastUpdated = new Date();
   let map = null, line = null, startM = null, endM = null, tracking = null;
   let chatOpen = false, live = false, view = 'home', metric = 'steps', tipCat = 'all', tipsOpen = false;
   let st = load();
@@ -106,6 +107,7 @@
     const now = new Date();
     $('#hello').textContent = 'Hello' + (st.profile && st.profile.name ? ', ' + st.profile.name : '');
     $('#date').textContent = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('#updated').textContent = 'Updated ' + lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     const n = E.nudge(now, sum, g, history());
     const nd = $('#nudge'); nd.textContent = n.en; nd.classList.toggle('warn', n.kind === 'walk-skipped');
     $('#setup').hidden = g.protein.status !== 'need-data';
@@ -663,6 +665,27 @@
   $('#share').onclick = share; $('#d-share').onclick = share;
   $('#reset').onclick = reset; $('#d-reset').onclick = reset;
   $('#sample').onclick = sample; $('#d-sample').onclick = sample;
+
+  // ---------------- refresh ----------------
+  // Re-reads the clock, re-checks whether live AI is reachable, and redraws every screen.
+  // It never reloads the page, so a walk in progress and your notes are not disturbed.
+  let refreshing = false;
+  async function refresh(manual) {
+    if (refreshing) return; refreshing = true;
+    const btn = $('#refresh-btn'); btn.classList.add('spin');
+    let online = true;
+    try {
+      const r = await fetch('api/coach', { cache: 'no-store', signal: AbortSignal.timeout(6000) });
+      live = r.ok ? !!(await r.json()).live : false;
+    } catch (e) { online = false; /* offline: keep what we knew */ }
+    lastUpdated = new Date(); render();
+    await new Promise((res) => setTimeout(res, manual ? 500 : 0)); // let the spinner be seen
+    btn.classList.remove('spin'); refreshing = false;
+    if (manual) toast(online ? 'Updated just now' : 'Updated (you seem to be offline)');
+  }
+  $('#refresh-btn').onclick = () => refresh(true);
+  $('#d-refresh').onclick = () => { closeDrawer(true); refresh(true); };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastUpdated.getTime() > 5 * 60 * 1000) refresh(false); }); // back after a while: catch up quietly
 
   // ---------------- boot ----------------
   fetch('api/coach').then((r) => (r.ok ? r.json() : { live: false })).then((j) => { live = !!j.live; render(); }).catch(() => render());
