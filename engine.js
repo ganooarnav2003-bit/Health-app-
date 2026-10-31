@@ -20,10 +20,10 @@
   const NUM = {
     ek: 1, एक: 1, one: 1, do: 2, दो: 2, two: 2, teen: 3, तीन: 3, three: 3,
     char: 4, chaar: 4, चार: 4, four: 4, paanch: 5, panch: 5, पांच: 5, पाँच: 5, five: 5,
-    chhe: 6, chhah: 6, छह: 6, six: 6, aadha: 0.5, adha: 0.5, aadhi: 0.5, आधा: 0.5, आधी: 0.5, half: 0.5,
+    chhe: 6, chhah: 6, छह: 6, six: 6, a: 1, an: 1, aadha: 0.5, adha: 0.5, aadhi: 0.5, आधा: 0.5, आधी: 0.5, half: 0.5,
     dedh: 1.5, डेढ़: 1.5, dhai: 2.5, ढाई: 2.5,
   };
-  const UNIT = new Set(['katori', 'कटोरी', 'bowl', 'plate', 'plt', 'piece', 'pieces', 'pc', 'pcs', 'cup', 'cups', 'glass', 'glasses', 'gilas', 'plate', 'प्लेट', 'कप']);
+  const UNIT = new Set(['slice', 'slices', 'handful', 'of', 'katori', 'कटोरी', 'bowl', 'plate', 'plt', 'piece', 'pieces', 'pc', 'pcs', 'cup', 'cups', 'glass', 'glasses', 'gilas', 'plate', 'प्लेट', 'कप']);
 
   // name, aliases, unit label, kcal per unit [lo, hi] (typical home portion; approximate)
   const FOODS = [
@@ -32,7 +32,7 @@
     { name: 'naan', al: ['naan', 'nan', 'नान'], unit: 'pc', kcal: [220, 300] },
     { name: 'rice', al: ['rice', 'chawal', 'chaawal', 'bhaat', 'चावल', 'भात'], unit: 'katori', kcal: [130, 200] },
     { name: 'dal', al: ['dal', 'daal', 'dhal', 'दाल'], unit: 'katori', kcal: [100, 150] },
-    { name: 'sabzi', al: ['sabzi', 'sabji', 'sabji', 'subzi', 'vegetable', 'veg', 'सब्जी', 'सब्ज़ी'], unit: 'katori', kcal: [80, 150] },
+    { name: 'sabzi', al: ['sabzi', 'sabji', 'subzi', 'vegetable', 'veg', 'aloo', 'bhindi', 'gobi', 'palak', 'bhaji', 'सब्जी', 'सब्ज़ी'], unit: 'katori', kcal: [80, 150] },
     { name: 'khichdi', al: ['khichdi', 'khichri', 'खिचड़ी'], unit: 'katori', kcal: [150, 220] },
     { name: 'idli', al: ['idli', 'idlis', 'idly', 'इडली', 'इडली'], unit: 'pc', kcal: [40, 60] },
     { name: 'dosa', al: ['dosa', 'dosas', 'dosai', 'डोसा'], unit: 'pc', kcal: [120, 200] },
@@ -48,6 +48,26 @@
     { name: 'biscuit', al: ['biscuit', 'biscuits', 'biskut', 'बिस्कुट'], unit: 'pc', kcal: [30, 50] },
     { name: 'samosa', al: ['samosa', 'samosas', 'समोसा', 'समोसे'], unit: 'pc', kcal: [250, 300] },
     { name: 'mithai', al: ['mithai', 'sweet', 'sweets', 'laddu', 'ladoo', 'jalebi', 'gulab', 'मिठाई', 'लड्डू'], unit: 'pc', kcal: [150, 250] },
+    { name: 'pizza', al: ['pizza', 'पिज़्ज़ा'], unit: 'slice', kcal: [250, 350], whole: 8 },
+    { name: 'burger', al: ['burger', 'बर्गर'], unit: 'pc', kcal: [300, 500] },
+    { name: 'sandwich', al: ['sandwich', 'sandwiches', 'सैंडविच'], unit: 'pc', kcal: [200, 350] },
+    { name: 'bread', al: ['bread', 'toast', 'pav', 'पाव', 'ब्रेड'], unit: 'slice', kcal: [70, 130] },
+    { name: 'puri', al: ['puri', 'poori', 'पूरी'], unit: 'pc', kcal: [100, 150] },
+    { name: 'bhatura', al: ['bhatura', 'bhature', 'भटूरा'], unit: 'pc', kcal: [250, 350] },
+    { name: 'chole', al: ['chole', 'chana', 'छोले'], unit: 'katori', kcal: [200, 280] },
+    { name: 'rajma', al: ['rajma', 'राजमा'], unit: 'katori', kcal: [180, 250] },
+    { name: 'biryani', al: ['biryani', 'biriyani', 'बिरयानी'], unit: 'plate', kcal: [400, 600] },
+    { name: 'pulao', al: ['pulao', 'pulav', 'पुलाव'], unit: 'katori', kcal: [180, 250] },
+    { name: 'dhokla', al: ['dhokla', 'ढोकला'], unit: 'pc', kcal: [40, 70] },
+    { name: 'vada', al: ['vada', 'wada', 'वड़ा'], unit: 'pc', kcal: [130, 200] },
+    { name: 'milk', al: ['milk', 'doodh', 'दूध'], unit: 'glass', kcal: [100, 150], drink: true },
+    { name: 'lassi', al: ['lassi', 'chaas', 'buttermilk', 'लस्सी', 'छाछ'], unit: 'glass', kcal: [80, 220], drink: true },
+    { name: 'juice', al: ['juice', 'जूस'], unit: 'glass', kcal: [100, 140], drink: true },
+    { name: 'oats', al: ['oats', 'oatmeal', 'porridge', 'daliya', 'दलिया'], unit: 'bowl', kcal: [150, 250] },
+    { name: 'salad', al: ['salad', 'सलाद'], unit: 'bowl', kcal: [30, 80] },
+    { name: 'soup', al: ['soup', 'सूप'], unit: 'bowl', kcal: [60, 120] },
+    { name: 'nuts', al: ['almonds', 'almond', 'badam', 'nuts', 'walnut', 'walnuts', 'बादाम'], unit: 'handful', kcal: [100, 170] },
+    { name: 'kheer', al: ['kheer', 'payasam', 'खीर'], unit: 'katori', kcal: [200, 300] },
     // A whole thali is too varied to guess: counted but flagged low-confidence.
     { name: 'thali', al: ['thali', 'थाली'], unit: 'plate', kcal: [600, 900], lowConf: true },
   ];
@@ -222,11 +242,14 @@
         // foods
         const f = FOOD_BY_ALIAS[t];
         if (f) {
-          const n = numBefore(tokens, i, 3);
+          let n = numBefore(tokens, i, 3);
+          const prev = tokens[i - 1];
+          let wholeAssumed = false;
+          if (n == null && f.whole && /^(whole|poora|pura|full|entire)$/.test(prev || '')) { n = f.whole; wholeAssumed = true; }
           const meal = {
             name: f.name, qty: n == null ? 1 : n, unit: f.unit, assumed: n == null,
             kcalLo: Math.round((n == null ? 1 : n) * f.kcal[0]), kcalHi: Math.round((n == null ? 1 : n) * f.kcal[1]),
-            slot: slotFor(c, hour) || slot, skipped: hasNeg, lowConf: !!f.lowConf,
+            slot: slot || slotFor(c, hour), skipped: hasNeg, lowConf: !!f.lowConf || wholeAssumed,
           };
           if (hasNeg) { meal.kcalLo = 0; meal.kcalHi = 0; }
           out.meals.push(meal);
@@ -236,14 +259,15 @@
           const n = numBefore(tokens, i, 1);
           const waterish = tokens.some((x) => WATER_WORDS.has(x)) || t !== 'glass' && t !== 'glasses' && t !== 'gilas' && t !== 'glas' && t !== 'गिलास';
           const hasDrinkWord = tokens.some((x) => WATER_WORDS.has(x)) || /(piya|pi liya|drank|drink|पिया)/.test(c);
-          if ((waterish || hasDrinkWord) && !hasNeg) {
+          const drinkFood = tokens.some((x) => FOOD_BY_ALIAS[x] && FOOD_BY_ALIAS[x].drink);
+          if ((waterish || hasDrinkWord) && !hasNeg && !drinkFood) {
             const per = /bottle|बोतल/.test(t) ? 3 : /lit|ltr|लीटर/.test(t) ? 4 : 1;
             out.water += (n == null ? 1 : n) * per;
           }
         }
       });
       // water without a unit: "paani piya" -> 1 glass assumed
-      if (!tokens.some((t) => GLASS_WORDS.has(t) || ['bottle', 'litre', 'liter', 'ltr', 'लीटर', 'बोतल'].includes(t)) &&
+      if (!tokens.some((x) => FOOD_BY_ALIAS[x] && FOOD_BY_ALIAS[x].drink) && !tokens.some((t) => GLASS_WORDS.has(t) || ['bottle', 'litre', 'liter', 'ltr', 'लीटर', 'बोतल'].includes(t)) &&
           tokens.some((t) => WATER_WORDS.has(t)) && /(piya|pi liya|drank|drink|पिया|had)/.test(c) && !hasNeg) {
         out.water += 1;
       }
@@ -276,7 +300,8 @@
   }
 
   // ---------- day summary, goals, nudges ----------
-  const DEFAULT_GOALS = { water: 6, walkBase: 20 };
+  const DEFAULT_GOALS = { water: 6, walkBase: 20, kcal: 1800 }; // kcal: a generic reference only, user can change it
+  const SLOTS = ['breakfast', 'lunch', 'snack', 'dinner'];
 
   function dayKey(d) {
     const x = new Date(d);
@@ -284,15 +309,17 @@
   }
 
   function summarize(entries) {
-    const s = { water: 0, walkMin: 0, steps: 0, km: 0, walkSkipped: false, kcalLo: 0, kcalHi: 0, meals: [], slots: new Set(), flags: [], bp: null, sugar: null, entries: entries.length };
+    const s = { bySlot: { breakfast: { lo: 0, hi: 0, items: [] }, lunch: { lo: 0, hi: 0, items: [] }, snack: { lo: 0, hi: 0, items: [] }, dinner: { lo: 0, hi: 0, items: [] } }, water: 0, walkMin: 0, steps: 0, km: 0, walkSkipped: false, kcalLo: 0, kcalHi: 0, meals: [], slots: new Set(), flags: [], bp: null, sugar: null, entries: entries.length };
     entries.forEach((e) => {
       s.water += e.water || 0;
       s.walkMin += e.walkMin || 0;
       s.steps += e.steps || 0;
       if (e.walkSkipped) s.walkSkipped = true;
-      (e.meals || []).forEach((m) => {
+      (e.meals || []).forEach((m, idx) => {
         if (m.skipped) return;
         s.kcalLo += m.kcalLo; s.kcalHi += m.kcalHi; s.meals.push(m); if (m.slot) s.slots.add(m.slot);
+        const b = s.bySlot[SLOTS.includes(m.slot) ? m.slot : 'snack'];
+        b.lo += m.kcalLo; b.hi += m.kcalHi; b.items.push({ ...m, entryId: e.id, idx });
       });
       if (e.safety && e.safety.level !== 'none') s.flags.push(e.safety);
       if (e.bp) s.bp = e.bp;
@@ -377,7 +404,12 @@
       clarify: null, reply: '',
     };
     const eaten = p.meals.filter((m) => !m.skipped);
-    if (p.meals.some((m) => m.lowConf)) res.clarify = L.thali[lang];
+    const lowM = p.meals.find((m) => m.lowConf);
+    if (lowM && lowM.name === 'thali') res.clarify = L.thali[lang];
+    else if (lowM) res.clarify = `I counted a whole ${lowM.name} (${lowM.qty} ${lowM.unit}s). If you ate less, tell me how many.`;
+    else if (!p.meals.length && !p.water && !p.walkMin && !p.steps && !p.walkSkipped && safety.level === 'none' && /(\bate\b|\bhad\b|eaten|khay|खाय|खाई|खाया|breakfast|lunch|dinner|nashta|नाश्ता)/.test(String(text).toLowerCase())) {
+      res.clarify = "I did not recognise that food. Try simple names such as roti, dal, rice, idli, poha, or a photo with the live AI.";
+    }
 
     const parts = [];
     const sm = safetyMessage(res.safety, lang);
@@ -391,7 +423,7 @@
     if (res.bp) logged.push(`BP ${res.bp.s}/${res.bp.d}`);
     if (res.sugar != null) logged.push(`sugar ${res.sugar}`);
     if (logged.length) parts.push(`${L.logged[lang]}: ${logged.join('; ')}.`);
-    else if (!sm && !p.walkSkipped && !p.meals.length) parts.push(L.nothing[lang]);
+    else if (!sm && !p.walkSkipped && !p.meals.length && !res.clarify) parts.push(L.nothing[lang]);
     if (p.walkSkipped) parts.push(NUDGE.walkSkippedToday[lang]);
     if (res.clarify) parts.push(res.clarify);
     else if (eaten.some((m) => m.assumed)) parts.push(L.assumed[lang]);
@@ -476,6 +508,11 @@
     } else if (/(diabet|sugar level|blood sugar|cholesterol|thyroid|bp |blood pressure|hypertension)/.test(q)) {
       topic = 'condition';
       a = 'I cannot advise on health conditions or targets. I can keep your readings in the log so you can show them to your doctor.';
+    } else if (/(calorie|kcal)/.test(q) && /(today|so far|have i|did i|eaten|my |i ate|i had)/.test(q)) {
+      topic = 'calories';
+      a = s.kcalHi
+        ? `So far today you have had roughly ${s.kcalLo}-${s.kcalHi} kcal. This is a rough range, and a common reference for older adults is around ${g.kcal || 1800} kcal a day. Your doctor or a dietitian can give you a number that fits you.`
+        : 'Nothing is logged yet today, so there are no calories to add up. Tell me what you ate and I will log it.';
     } else if (/(roti|rice|chawal|carb|calorie|kcal|protein)/.test(q)) {
       topic = 'nutrition';
       a = 'Calories here are rough ranges for typical home portions, not exact. Pairing roti or rice with dal and vegetables is a common, balanced pattern. For specific targets, ask a doctor or dietitian.';
@@ -500,5 +537,5 @@
     return `${n}'s day:\nWater: ${sum.water}/${goals.water} glasses\nWalk: ${sum.walkMin}/${goals.walk} min, ${sum.steps} steps, ${sum.km} km\nFood: ${sum.meals.length} items, ${kcal}${flag}\n(Dinchariya app - not medical advice)`;
   }
 
-  return { kmFromSteps, STEP_KM, STEPS_PER_MIN, answerQuery, parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };
+  return { SLOTS, kmFromSteps, STEP_KM, STEPS_PER_MIN, answerQuery, parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };
 });

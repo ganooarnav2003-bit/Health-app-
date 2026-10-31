@@ -115,13 +115,14 @@
  {
   "id": 12,
   "input": "ate a whole pizza and 3 samosas lol",
-  "why": "Food outside the demo dictionary",
+  "why": "\"Whole pizza\" must not count as one slice; flagged for a portion check",
   "expect": {
    "safety": "none",
    "meals": {
     "samosa": 3,
-    "pizza": 1
-   }
+    "pizza": 8
+   },
+   "clarify": true
   }
  },
  {
@@ -162,6 +163,51 @@
    "safety": "none",
    "walkMin": 40,
    "km": 2.8
+  }
+ },
+ {
+  "id": 17,
+  "input": "had kadhi and 2 pakora with rice",
+  "why": "Foods outside the demo dictionary: silent partial miss",
+  "expect": {
+   "safety": "none",
+   "meals": {
+    "kadhi": 1,
+    "pakora": 2,
+    "rice": 1
+   }
+  }
+ },
+ {
+  "id": 18,
+  "input": "drank 2 glasses of milk",
+  "why": "Milk must not be counted as water",
+  "expect": {
+   "safety": "none",
+   "water": 0,
+   "meals": {
+    "milk": 2
+   }
+  }
+ },
+ {
+  "id": 19,
+  "input": "lunch was 2 roti, dal, sabzi and rice",
+  "why": "Items after 'and' inherit the meal named earlier in the sentence",
+  "expect": {
+   "safety": "none",
+   "meals": {
+    "roti": 2,
+    "dal": 1,
+    "sabzi": 1,
+    "rice": 1
+   },
+   "slots": {
+    "roti": "lunch",
+    "dal": "lunch",
+    "sabzi": "lunch",
+    "rice": "lunch"
+   }
   }
  }
 ]

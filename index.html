@@ -55,6 +55,19 @@
       <div id="reply" class="reply" hidden aria-live="polite"></div>
     </section>
 
+    <section class="card" id="kcalcard" aria-labelledby="h-kcal">
+      <div class="thead"><h2 id="h-kcal">🍽 Calories</h2><div class="stat"><span class="v" id="k-val"></span><span class="k">kcal · rough range</span></div></div>
+      <div class="bar"><i id="b-kcal"></i></div>
+      <p class="muted" id="k-empty">Tell me what you ate above and your calories will appear here, meal by meal.</p>
+      <div id="k-slots"></div>
+      <p class="why" id="k-ref"></p>
+      <div class="row">
+        <input id="kgoal" type="number" inputmode="numeric" min="800" max="4000" placeholder="Daily target (optional)" aria-label="Your own daily calorie target">
+        <button id="kgoal-set" class="big">Set</button>
+      </div>
+      <p class="why">These are ranges for typical home portions, not exact. If something looks wrong, tap ✕ to remove it. This is not dietary or medical advice.</p>
+    </section>
+
     <section class="card" id="watercard" aria-labelledby="h-water">
       <div class="thead"><h2 id="h-water">💧 Water</h2><div class="stat"><span class="v" id="w-val"></span><span class="k" id="w-sub"></span></div></div>
       <div class="glasses" id="glasses" aria-hidden="true"></div>

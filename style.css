@@ -68,3 +68,13 @@ button:disabled{opacity:.55}
 .welcome .form{margin:14px}
 .full{width:100%;margin-top:6px}
 .tiny{color:var(--mut);font-size:.8rem}
+
+/* ---- Calories ---- */
+.slot{border-top:1px solid var(--line);padding:10px 0}.slot:first-child{border-top:0}
+.slothead{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.slothead span{color:var(--pri);font-variant-numeric:tabular-nums;white-space:nowrap}
+.items{list-style:none;margin:4px 0 0;padding:0}
+.items li{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.95rem;color:var(--ink)}
+.items li .n{flex:1}.items li .c{color:var(--mut);font-size:.85rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.items button{min-height:44px;min-width:44px;padding:0;border-radius:10px;background:transparent;color:var(--mut)}
+.bar.over i{background:#e0a93b}

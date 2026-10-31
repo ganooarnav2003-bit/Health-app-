@@ -42,7 +42,7 @@
 
 **Adaptive plan (not a fixed plan):** walking goal = `clamp(round5(avg_last_3_days * 1.2 + 5), 10, 30)` min. A person who walked 5/0/12 min gets 10 min, not an impossible 30. The tile says why. Skipped walk -> no guilt message and no catch-up penalty (F09 done the gentle way).
 
-### Test: 16 realistic inputs, **demo engine** (`node tests/run-tests.js`)
+### Test: 19 realistic inputs, **demo engine** (`node tests/run-tests.js`)
 | # | Input | Why this case | Result | Detail |
 |---|---|---|---|---|
 | 1 | aaj subah 2 roti aur ek katori dal khayi, chai bhi pi | Hinglish meal | pass | |
@@ -56,18 +56,21 @@
 | 9 | sugar 54 aaya subah | low reading | pass | red |
 | 10 | doctor ne jo tablet di hai woh band kar doon kya? | medication | pass | refuses, "ask doctor" |
 | 11 | aaj walk nahi gaya, ghutne mein dard tha | skipped walk + pain | pass | |
-| 12 | ate a whole pizza and 3 samosas lol | food not in dictionary | **FAIL** | pizza silently missed |
+| 12 | ate a whole pizza and 3 samosas lol | "whole pizza" must not count as one slice | pass | counted as 8 slices (~2,000-2,800 kcal) and asks the user to confirm; **this originally failed** (pizza was missing, then would have been counted as 1 slice) |
 | 13 | to roti aur sabzi khayi | voice heard "do" as "to" | **FAIL** | logged 1 roti, not 2 |
 | 14 | dil ghabra raha hai aur pasina aa raha hai | heart symptoms, no keyword "chest" | pass | red; **passes only because I added this pattern after thinking of it** |
 | 15 | walked 3 km in 40 minutes | distance given, steps derived | pass | ~4,286 steps, 3 km |
 | 16 | did 4000 steps today | steps only | pass | 40 min, 2.8 km (derived at 100 steps/min, 0.7 m/step) |
+| 17 | had kadhi and 2 pakora with rice | foods outside the dictionary | **FAIL** | kadhi and pakora silently missed; only rice logged |
+| 18 | drank 2 glasses of milk | milk must not count as water | pass | |
+| 19 | lunch was 2 roti, dal, sabzi and rice | later items must inherit "lunch" | pass | **found by browser testing**: items after "and" were filed under breakfast until fixed |
 
-**What this shows (honest reading).** 14/16 pass on the offline parser. The two failures are the point of the live AI: a dictionary can't know pizza or fix a speech-to-text error from context. Failure 12 is a silent miss, so the UI shows every logged item with a delete button and says "I assumed 1 portion" when it guessed. Case 14 is a warning about keyword safety: it is only as good as my list, which is why the live path also lets the model escalate. **Not yet done:** the same 16 cases against the live AI (`node tests/run-tests.js --url https://YOUR-APP/api/coach`). `TODO: paste that second table and add >= 3 new inputs from your target user.`
+**What this shows (honest reading).** 17/19 pass on the offline parser. The two failures (13, 17) are the point of the live AI: a dictionary can't know every dish or fix a speech-to-text error from context. Failure 17 is a silent miss, so the UI shows every logged item with a delete button and says "I assumed 1 portion" when it guessed. Case 14 is a warning about keyword safety: it is only as good as my list, which is why the live path also lets the model escalate. **Not yet done:** the same 19 cases against the live AI (`node tests/run-tests.js --url https://YOUR-APP/api/coach`). `TODO: paste that second table and add >= 3 new inputs from your target user.`
 
 ## Q4. What will you build and leave out? (10)
 | ID | Feature | Decision | Reason |
 |---|---|---|---|
-| F01 | Food photo -> calories | **Build now** (live AI only), as *range + question*, not a number | Photo of a plate is exactly what typing replaces; D06/D11 mean never claim precision |
+| F01 | Food -> calories | **Build now**: typed/spoken food (and photo in live mode) becomes a *range*, a per-meal breakdown and a day total with a running calorie card; every item can be removed with one tap, and a soft reference target (default 1,800 kcal, editable) is shown with a "ask your doctor" note | Photo of a plate is exactly what typing replaces; D06/D11 mean never claim precision |
 | F02 | Profile and goals | **Build now** (tiny) | Name + language only; goals are derived from behaviour, no BMI forms. Reference-image goals: **Never** (body-image risk, D09) |
 | F03 | Activity tracking | **Build now**: steps, distance (km, estimated from steps) and walking minutes, by tap or voice | Core to the customer's doctor's advice; no wearable needed (D05) |
 | F04 | Diet plan | **Later** | Needs dietitian review; a calorie-deficit plan for a 63-year-old is medical territory |

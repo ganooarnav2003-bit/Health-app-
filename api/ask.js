@@ -5,7 +5,7 @@ const E = require('../engine.js');
 const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-5-5';
 
 const SYSTEM = `You are the question-answering helper inside "Dinchariya", a daily health-habit app for older adults.
-Scope: water, walking (steps, distance, minutes), simple food/portion questions, and the person's own day. Use the tools to read the person's data whenever a question is about THEIR day, goal or progress; never guess their numbers.
+Scope: water, walking (steps, distance, minutes), calories logged today (always a rough range, never exact), simple food/portion questions, and the person's own day. Use the tools to read the person's data whenever a question is about THEIR day, goal or progress; never guess their numbers.
 HARD RULES: never diagnose or name a disease they might have; never advise on medicines, insulin or doses; never say a symptom is harmless; for medical or condition-specific questions say you cannot advise and suggest their doctor or a dietitian; any emergency sign (chest pain, trouble breathing, fainting, one-sided weakness, severe bleeding) means: call 112 now.
 Style: plain English, at most 3 short sentences, no lists, no emoji, no lectures. If you do not know, say so briefly.`;
 
@@ -18,7 +18,7 @@ const TOOLS = [
 function runTool(name, c) {
   const s = c.summary || {};
   if (name === 'get_today_log') return { water_glasses: +s.water || 0, walk_minutes: +s.walkMin || 0, steps: +s.steps || 0, distance_km: +s.km || 0, kcal_range: [+s.kcalLo || 0, +s.kcalHi || 0], foods: (s.meals || []).slice(0, 15).map(String) };
-  if (name === 'get_goals') return { water_glasses: +(c.goals || {}).water || 6, walk_minutes: +(c.goals || {}).walk || 20, steps: +(c.goals || {}).steps || 0, distance_km: +(c.goals || {}).km || 0 };
+  if (name === 'get_goals') return { water_glasses: +(c.goals || {}).water || 6, walk_minutes: +(c.goals || {}).walk || 20, steps: +(c.goals || {}).steps || 0, distance_km: +(c.goals || {}).km || 0, kcal_reference: +(c.goals || {}).kcal || 1800 };
   if (name === 'get_recent_days') return (c.history || []).slice(-7).map((h) => ({ date: String(h.date), walk_minutes: +h.walkMin || 0 }));
   return { error: 'unknown tool' };
 }

@@ -30,7 +30,7 @@
   }
   function goals() {
     const h = history(), walk = E.adaptiveWalkGoal(h, E.DEFAULT_GOALS.walkBase), steps = walk * E.STEPS_PER_MIN;
-    return { water: E.DEFAULT_GOALS.water, walkBase: E.DEFAULT_GOALS.walkBase, walk, steps, km: E.kmFromSteps(steps), hasHistory: h.length > 0 };
+    return { kcal: (st.profile && st.profile.kcalGoal) || E.DEFAULT_GOALS.kcal, kcalCustom: !!(st.profile && st.profile.kcalGoal), water: E.DEFAULT_GOALS.water, walkBase: E.DEFAULT_GOALS.walkBase, walk, steps, km: E.kmFromSteps(steps), hasHistory: h.length > 0 };
   }
   const fmt = (n) => Number(n).toLocaleString('en-IN');
 
@@ -42,6 +42,33 @@
     const now = new Date(), g = goals(), sum = E.summarize(entriesOn(todayKey()));
     $('#hello').textContent = 'Hello' + (st.profile.name ? ', ' + st.profile.name : '');
     $('#date').textContent = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+
+    // calories
+    const SLOT_LABEL = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snacks', dinner: 'Dinner' };
+    $('#k-val').textContent = sum.kcalHi ? `${fmt(sum.kcalLo)}–${fmt(sum.kcalHi)}` : '0';
+    const mid = (sum.kcalLo + sum.kcalHi) / 2;
+    $('#b-kcal').style.width = Math.min(100, (mid / g.kcal) * 100) + '%';
+    $('#b-kcal').parentElement.classList.toggle('over', mid > g.kcal * 1.1);
+    $('#k-empty').hidden = sum.meals.length > 0;
+    $('#k-ref').textContent = (g.kcalCustom ? `Your target: ${fmt(g.kcal)} kcal a day.` : `Reference: about ${fmt(g.kcal)} kcal a day is a common figure for older adults. Ask your doctor or dietitian for yours.`) +
+      (mid > g.kcal * 1.1 ? ' You are above it today; a lighter, earlier dinner is an easy way to balance.' : '');
+    const ks = $('#k-slots'); ks.innerHTML = '';
+    E.SLOTS.forEach((sl) => {
+      const b = sum.bySlot[sl]; if (!b.items.length) return;
+      const wrap = document.createElement('div'); wrap.className = 'slot';
+      const head = document.createElement('div'); head.className = 'slothead';
+      head.innerHTML = '<b></b><span></span>'; head.firstChild.textContent = SLOT_LABEL[sl]; head.lastChild.textContent = `${fmt(b.lo)}–${fmt(b.hi)} kcal`;
+      const ul = document.createElement('ul'); ul.className = 'items';
+      b.items.forEach((m) => {
+        const li = document.createElement('li');
+        const n = document.createElement('span'); n.className = 'n'; n.textContent = `${m.qty !== 1 ? m.qty + ' × ' : ''}${m.name}${m.assumed ? ' (1 assumed)' : ''}`;
+        const c = document.createElement('span'); c.className = 'c'; c.textContent = `${m.kcalLo}–${m.kcalHi}`;
+        const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Remove ' + m.name);
+        x.onclick = () => removeMeal(m.entryId, m.idx);
+        li.append(n, c, x); ul.appendChild(li);
+      });
+      wrap.append(head, ul); ks.appendChild(wrap);
+    });
 
     // water
     $('#w-val').textContent = `${sum.water} / ${g.water}`;
@@ -130,7 +157,24 @@
     btn.disabled = false;
     const empty = !r.meals.length && !r.water && !r.walkMin && !r.steps && !r.walkSkipped && !r.bp && r.sugar == null && r.safety.level === 'none';
     if (!empty) pushEntry({ text: r.safety.level === 'red' ? '' : text, meals: r.meals, water: r.water, walkMin: r.walkMin, steps: r.steps || 0, stepsEst: !!r.stepsEst, walkSkipped: r.walkSkipped, bp: r.bp, sugar: r.sugar, safety: r.safety });
+    const after = E.summarize(entriesOn(todayKey()));
+    if (!empty && r.safety.level !== 'red' && r.meals.some((m) => !m.skipped) && after.kcalHi) r.reply += ` Today so far: about ${fmt(after.kcalLo)}–${fmt(after.kcalHi)} kcal.`;
     showReply(r); $('#say').value = ''; render();
+  }
+
+  // ---------------- calories ----------------
+  function removeMeal(entryId, idx) {
+    const e = st.entries.find((x) => x.id === entryId); if (!e) return;
+    e.meals.splice(idx, 1);
+    const empty = !e.meals.length && !e.water && !e.walkMin && !e.steps && !e.walkSkipped && !e.bp && e.sugar == null && (!e.safety || e.safety.level === 'none');
+    if (empty) st.entries = st.entries.filter((x) => x !== e);
+    save(); render();
+  }
+  function setKcalGoal() {
+    const v = $('#kgoal').value.trim();
+    if (!v) { delete st.profile.kcalGoal; }
+    else { const n = Math.round(+v); if (!(n >= 800 && n <= 4000)) { $('#k-ref').textContent = 'Please enter a number between 800 and 4,000, or leave it blank for the reference figure.'; return; } st.profile.kcalGoal = n; }
+    $('#kgoal').value = ''; save(); render();
   }
 
   // ---------------- water + steps trackers ----------------
@@ -158,7 +202,7 @@
     const btn = $('#ask'); btn.disabled = true;
     const sum = E.summarize(entriesOn(todayKey())), g = goals();
     const ctx = { summary: { water: sum.water, walkMin: sum.walkMin, steps: sum.steps, km: sum.km, kcalLo: sum.kcalLo, kcalHi: sum.kcalHi, meals: sum.meals.map((m) => m.name) },
-      goals: { water: g.water, walk: g.walk, steps: g.steps, km: g.km }, history: history().map((x) => ({ date: x.date, walkMin: x.walkMin })) };
+      goals: { water: g.water, walk: g.walk, steps: g.steps, km: g.km, kcal: g.kcal }, history: history().map((x) => ({ date: x.date, walkMin: x.walkMin })) };
     const prior = st.chat.slice(-6).map((m) => ({ role: m.role, content: m.content }));
     st.chat.push({ role: 'user', content: q }); renderChat(true);
     let r = E.answerQuery(q, ctx);
@@ -189,6 +233,8 @@
     const b = document.createElement('button'); b.type = 'button'; b.textContent = c; b.onclick = () => sendChat(c); $('#askchips').appendChild(b);
   });
 
+  $('#kgoal-set').onclick = setKcalGoal;
+  $('#kgoal').addEventListener('keydown', (e) => { if (e.key === 'Enter') setKcalGoal(); });
   $('#w-plus').onclick = () => addWater(1);
   $('#w-bottle').onclick = () => addWater(3);
   $('#w-minus').onclick = removeWater;

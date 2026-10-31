@@ -20,6 +20,7 @@ function check(c, r) {
     const m = r.meals.find((x) => x.name.toLowerCase().includes(n) && !x.skipped);
     if (!m) bad.push(`missing ${n}`); else if (Math.abs(m.qty - q) > 0.01) bad.push(`${n} qty ${m.qty}!=${q}`);
   }
+  if (e.slots) for (const [n, sl] of Object.entries(e.slots)) { const m = r.meals.find((x) => x.name.toLowerCase().includes(n)); if (!m || m.slot !== sl) bad.push(`${n} slot ${m && m.slot}!=${sl}`); }
   if (e.water != null && r.water !== e.water) bad.push(`water ${r.water}!=${e.water}`);
   if (e.walkMin != null && r.walkMin !== e.walkMin) bad.push(`walk ${r.walkMin}!=${e.walkMin}`);
   if (e.walkSkipped != null && !!r.walkSkipped !== e.walkSkipped) bad.push('walkSkipped');
