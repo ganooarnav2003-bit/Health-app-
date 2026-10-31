@@ -60,6 +60,16 @@
       <div id="reply" class="reply" hidden aria-live="polite"></div>
     </section>
 
+    <section class="card" id="askcard">
+      <h2>Ask a question</h2>
+      <div class="chips" id="askchips"></div>
+      <div class="row">
+        <input id="q" maxlength="300" placeholder="e.g. How am I doing today?" aria-label="Your question" autocomplete="off">
+        <button id="ask" class="big primary">Ask</button>
+      </div>
+      <div id="answer" class="reply" hidden aria-live="polite"></div>
+    </section>
+
     <section class="card">
       <h2 data-t="today">Today's notes</h2>
       <ul id="log" class="log"></ul>

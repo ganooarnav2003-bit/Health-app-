@@ -174,6 +174,34 @@
     save(); render();
   };
 
+
+  // ---- ask agent ----
+  ['How am I doing today?', 'How much water should I drink?', 'What should I eat tonight?', 'Should I stop my tablet?'].forEach((c) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = c; b.onclick = () => { $('#q').value = c; ask(); }; $('#askchips').appendChild(b);
+  });
+  function snapshot() {
+    const sum = E.summarize(entriesOn(todayKey())), g = goals();
+    return { summary: { water: sum.water, walkMin: sum.walkMin, kcalLo: sum.kcalLo, kcalHi: sum.kcalHi, meals: sum.meals.map((m) => m.name) },
+      goals: { water: g.water, walk: g.walk }, history: history().map((x) => ({ date: x.date, walkMin: x.walkMin })) };
+  }
+  async function ask() {
+    const q = $('#q').value.trim(); if (!q) return;
+    const out = $('#answer'), btn = $('#ask'); btn.disabled = true; out.hidden = false; out.className = 'reply'; out.textContent = t('thinking');
+    const ctx = snapshot();
+    let r = E.answerQuery(q, ctx);
+    if (r.safety.level !== 'red' && r.topic !== 'medicine' && live) { // red flags and medicine questions never wait for the network
+      try {
+        const x = await fetch('api/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(20000), body: JSON.stringify({ question: q, context: ctx }) });
+        if (x.ok) r = await x.json();
+      } catch (e) { /* offline: keep the local answer */ }
+    }
+    out.textContent = r.answer;
+    out.className = 'reply' + (r.safety && r.safety.level === 'red' ? ' red' : r.safety && r.safety.level === 'amber' ? ' amber' : '');
+    btn.disabled = false;
+  }
+  $('#ask').onclick = ask;
+  $('#q').addEventListener('keydown', (e) => { if (e.key === 'Enter') ask(); });
+
   // ---- boot ----
   fetch('api/coach').then((r) => (r.ok ? r.json() : { live: false })).then((j) => { live = !!j.live; render(); }).catch(() => render());
   render();

@@ -51,3 +51,5 @@ button:disabled{opacity:.55}
 .full{width:100%;margin-top:6px}
 button.primary{box-shadow:0 0 18px rgba(47,212,107,.25)}
 .hello{color:var(--pri)}
+
+#askcard .row input{flex:1}#askcard .row{align-items:stretch}

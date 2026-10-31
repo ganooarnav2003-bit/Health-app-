@@ -81,7 +81,7 @@
     ['gi', /(ulti|vomit|loose motion|dast|दस्त|उल्टी)/g],
     ['palpitation', /(ghabra|ghabrahat|घबरा)/g],
   ];
-  const MED_OBJ = /(dawai|dawa|dava|tablet|goli|insulin|medicine|medication|dose|दवाई|दवा|गोली)/;
+  const MED_OBJ = /(dawai|dawa|dava|tablet|tablets|goli|insulin|medicine|medicines|medication|dose|pill|pills|capsule|syrup|ointment|supplement|antibiotic|painkiller|paracetamol|crocin|dolo|metformin|aspirin|ibuprofen|statin|amlodipine|telmisartan|दवाई|दवा|गोली)/;
   const MED_ACT = /(band|chhod|chod|stop|skip|double|zyada|jyada|kam kar|badal|change|nahi leni|mat lo|mat le|बंद|छोड़|ज्यादा|ज़्यादा)/;
 
   function negated(text, idx, len) {
@@ -171,7 +171,7 @@
   }
 
   // Block diagnosis / prescription wording from any AI-written reply.
-  const BANNED = /(\bdiagnos|you (have|are suffering|probably have|might have)|aapko .{0,25}(bimari|rog|diabetes|hai)\b|\btake \d|\b\d+\s?mg\b|stop taking|increase (your )?dose|\bprescri|dose badha|dawai band kar|dawai le lo|you should take)/i;
+  const BANNED = /(\bdiagnos|you (are suffering|probably have|might have|may have|could have|likely have)|you have (a |an )?(diabet|hypertension|high blood|low blood|heart|cancer|infection|thyroid|an?emia|arthritis|disease|disorder|syndrome|condition)|aapko .{0,25}(bimari|rog|diabetes|hai)\b|\btake \d|\b\d+\s?mg\b|stop taking|increase (your )?dose|\bprescri|dose badha|dawai band kar|dawai le lo|you should take)/i;
   function guardrail(reply) {
     if (!reply || BANNED.test(reply)) return null;
     let r = String(reply).trim();
@@ -428,6 +428,51 @@
     return out;
   }
 
+
+  // ---------- question answering (demo mode; live mode uses api/ask.js) ----------
+  // ctx.summary = { water, walkMin, kcalLo, kcalHi, meals:[names] }, ctx.goals = { water, walk }
+  function answerQuery(question, ctx) {
+    ctx = ctx || {};
+    const q = String(question || '').toLowerCase();
+    const s = ctx.summary || { water: 0, walkMin: 0, kcalLo: 0, kcalHi: 0, meals: [] };
+    const g = ctx.goals || { water: 6, walk: 20 };
+    const safety = assessSafety(q);
+    const sm = safetyMessage(safety, 'en');
+    if (safety.level === 'red') return { source: 'safety', safety, answer: sm, topic: 'safety' };
+    let topic = 'other', a;
+    if (MED_OBJ.test(q)) { topic = 'medicine'; a = SAFETY_TEXT.med.en; }
+    else if (/(how am i|how('s| is) my day|my progress|today.*(summary|so far)|so far today|how much have i)/.test(q)) {
+      topic = 'today';
+      const food = s.kcalHi ? ` Food so far is roughly ${s.kcalLo}-${s.kcalHi} kcal.` : ' No food logged yet.';
+      a = `Today: water ${s.water} of ${g.water} glasses, walking ${s.walkMin} of ${g.walk} minutes.${food}`;
+    } else if (/(water|hydrat|thirst|how much.*drink)/.test(q)) {
+      topic = 'water';
+      a = `Many adults aim for about ${g.water}-8 glasses a day, more in hot weather. You are at ${s.water} today. If your doctor has limited your fluids, follow your doctor.`;
+    } else if (/(walk|exercise|steps|workout|yoga)/.test(q)) {
+      topic = 'walk';
+      a = `Short, regular walks beat rare long ones. Your goal today is ${g.walk} minutes, set from your last few days. Stop and tell your doctor if a walk causes pain, dizziness or breathlessness.`;
+    } else if (/(dinner|tonight|what (should|can) i eat|light meal|snack)/.test(q)) {
+      topic = 'food';
+      a = 'A light, early meal usually sits well: dal or curd, one or two roti, and a vegetable. ' + (s.kcalHi ? `You have logged roughly ${s.kcalLo}-${s.kcalHi} kcal so far.` : 'Nothing is logged yet today.') + ' For a plan that fits your health conditions, ask a doctor or dietitian.';
+    } else if (/(diabet|sugar level|blood sugar|cholesterol|thyroid|bp |blood pressure|hypertension)/.test(q)) {
+      topic = 'condition';
+      a = 'I cannot advise on health conditions or targets. I can keep your readings in the log so you can show them to your doctor.';
+    } else if (/(roti|rice|chawal|carb|calorie|kcal|protein)/.test(q)) {
+      topic = 'nutrition';
+      a = 'Calories here are rough ranges for typical home portions, not exact. Pairing roti or rice with dal and vegetables is a common, balanced pattern. For specific targets, ask a doctor or dietitian.';
+    } else if (/(sleep|insomnia|tired)/.test(q)) {
+      topic = 'sleep';
+      a = 'This app does not track sleep. A regular bedtime and an early, light dinner help many people. If sleep trouble continues, please talk to your doctor.';
+    } else if (/(who are you|what are you|what can you|how does this work|how do you work|help)/.test(q)) {
+      topic = 'about';
+      a = 'I log what you tell me, adapt your walking goal to your week, and answer simple questions about water, walking, food and your day. I never diagnose or advise on medicines.';
+    } else {
+      a = 'I can help with water, walking, simple food questions and your day so far. For anything else about your health, please ask your doctor.';
+    }
+    if (safety.level === 'amber' && topic !== 'medicine') a += ' ' + sm;
+    return { source: 'demo', safety, answer: a, topic };
+  }
+
   function familySummary(name, sum, goals, lang) {
     const n = name || (lang === 'hi' ? 'Aaj' : 'Today');
     const kcal = sum.kcalHi ? `${sum.kcalLo}-${sum.kcalHi} kcal (rough)` : '-';
@@ -436,5 +481,5 @@
     return `${n}'s day:\nWater: ${sum.water}/${goals.water} glasses\nWalk: ${sum.walkMin}/${goals.walk} min\nFood: ${sum.meals.length} items, ${kcal}${flag}\n(Dinchariya app - not medical advice)`;
   }
 
-  return { parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };
+  return { answerQuery, parse, analyze, assessSafety, safetyMessage, guardrail, fromAI, summarize, adaptiveWalkGoal, nudge, familySummary, dayKey, DEFAULT_GOALS, FOODS };
 });
