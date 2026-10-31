@@ -6,13 +6,13 @@
   const $$ = (s) => [...document.querySelectorAll(s)];
 
   const TXT = {
-    en: { onb_lead: 'Tell me about your day, the way you would tell family. I will keep the notes.', onb_name: 'Your name (optional)', onb_start: 'Start', onb_priv: 'Your notes stay on this phone. Nothing to sign up for.',
+    en: { onb_h: 'Your day, in your own words.', p1h: 'Just speak', p1: 'Hindi, Hinglish or English. No forms.', p2h: 'Gentle reminders', p2: 'One small nudge at the right time.', p3h: 'Safe by design', p3: 'Never diagnoses. Urgent signs point to 112.', onb_lead: 'Tell me about your day, the way you would tell family. I will keep the notes.', onb_name: 'Your name (optional)', onb_start: 'Start', onb_priv: 'Your notes stay on this phone. Nothing to sign up for.',
       water: 'Water', walk: 'Walk', food: 'Food', rough: 'rough estimate', say: 'What did you eat, drink or do today? Just say it.', send: 'Log it', today: "Today's notes", empty: 'Nothing yet.',
       share: 'Share today with family (WhatsApp)', sample: 'Load sample week (made-up)', reset: 'Erase all my notes', water_note: 'If your doctor has limited your fluids, follow the doctor, not this goal.',
       hello: (n) => 'Hello' + (n ? ', ' + n : ''), ph: 'e.g. 2 roti, dal, 1 glass water, 15 min walk', thinking: 'One moment…', noPhoto: 'Photo reading needs the live AI. Please type or say what was on the plate.',
       glass: 'glasses', min: 'min', walkWhy: (g, base) => g < base ? `goal made smaller to match your week` : `goal grows slowly with you`, delConfirm: 'Remove this note?', resetConfirm: 'Erase everything on this phone?',
       live: 'Live AI', demo: 'Demo mode (works offline)', mic: 'Listening…', chips: ['2 roti, dal, sabzi', 'one glass water', '20 minute walk', 'did not walk today'] },
-    hi: { onb_lead: 'Apna din bataiye, jaise ghar walon ko batate hain. Likhne ka kaam mera.', onb_name: 'Aapka naam (zaroori nahi)', onb_start: 'Shuru karein', onb_priv: 'Aapke notes isi phone mein rehte hain. Sign-up ki zaroorat nahi.',
+    hi: { onb_h: 'Aapka din, aapki apni bhasha mein.', p1h: 'Bas boliye', p1: 'Hindi, Hinglish ya English. Koi form nahi.', p2h: 'Halke reminder', p2: 'Sahi samay par ek chhoti yaad.', p3h: 'Surakshit', p3: 'Kabhi diagnosis nahi. Zaroori lakshan par 112.', onb_lead: 'Apna din bataiye, jaise ghar walon ko batate hain. Likhne ka kaam mera.', onb_name: 'Aapka naam (zaroori nahi)', onb_start: 'Shuru karein', onb_priv: 'Aapke notes isi phone mein rehte hain. Sign-up ki zaroorat nahi.',
       water: 'Paani', walk: 'Walk', food: 'Khana', rough: 'andaaza', say: 'Aaj kya khaya, piya ya kiya? Bas bol dijiye.', send: 'Likh lo', today: 'Aaj ke notes', empty: 'Abhi kuch nahi.',
       share: 'Aaj ka din parivaar ko bhejein (WhatsApp)', sample: 'Sample hafta dekhein (kalpanik)', reset: 'Mere saare notes mita dein', water_note: 'Agar doctor ne paani kam karne ko kaha hai to doctor ki baat maanein.',
       hello: (n) => 'Namaste' + (n ? ' ' + n : ''), ph: 'jaise: 2 roti, dal, ek glass paani, 15 min walk', thinking: 'Ek minute…', noPhoto: 'Photo samajhne ke liye live AI chahiye. Kripya likh ya bol kar bataiye thali mein kya tha.',

@@ -12,17 +12,28 @@
 
 <main id="app" class="wrap">
   <!-- Onboarding: the first two minutes -->
-  <section id="onboard" hidden>
-    <h1>Namaste 🙏<br><small>Dinchariya</small></h1>
-    <p class="lead" data-t="onb_lead">Tell me about your day, the way you would tell family. I will keep the notes.</p>
-    <label for="name" data-t="onb_name">Your name (optional)</label>
-    <input id="name" autocomplete="off" maxlength="30">
-    <div class="seg" role="group" aria-label="Language">
-      <button data-lang="hi" class="on">हिंदी / Hinglish</button>
-      <button data-lang="en">English</button>
+  <section id="onboard" class="welcome" hidden>
+    <div class="hero">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#fff"/><path d="M24 37s-11-6.6-11-15a6.3 6.3 0 0 1 11-4.2A6.3 6.3 0 0 1 35 22c0 8.4-11 15-11 15z" fill="#0e7c7b"/><path d="M14 25h6l2-4 3 7 2-3h7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="brand">Dinchariya</div>
+      <h1 data-t="onb_h">Your day, in your own words.</h1>
+      <p class="lead" data-t="onb_lead">Tell me about your day, the way you would tell family. I will keep the notes.</p>
     </div>
-    <button id="start" class="big primary" data-t="onb_start">Start</button>
-    <p class="tiny" data-t="onb_priv">Your notes stay on this phone. Nothing to sign up for.</p>
+    <ul class="points">
+      <li><b data-t="p1h">Just speak</b><span data-t="p1">Hindi, Hinglish or English. No forms.</span></li>
+      <li><b data-t="p2h">Gentle reminders</b><span data-t="p2">One small nudge at the right time.</span></li>
+      <li><b data-t="p3h">Safe by design</b><span data-t="p3">Never diagnoses. Urgent signs point to 112.</span></li>
+    </ul>
+    <div class="card form">
+      <label for="name" data-t="onb_name">Your name (optional)</label>
+      <input id="name" autocomplete="off" maxlength="30">
+      <div class="seg" role="group" aria-label="Language">
+        <button data-lang="hi" class="on">हिंदी / Hinglish</button>
+        <button data-lang="en">English</button>
+      </div>
+      <button id="start" class="big primary full" data-t="onb_start">Start</button>
+      <p class="tiny" data-t="onb_priv">Your notes stay on this phone. Nothing to sign up for.</p>
+    </div>
   </section>
 
   <!-- Daily screen -->

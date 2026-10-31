@@ -1,9 +1,9 @@
-:root{--bg:#fffaf2;--ink:#1d1b16;--mut:#5d584d;--card:#fff;--line:#e4dccb;--pri:#0b6b4f;--priInk:#fff;--warn:#8a4b00;--warnBg:#fff1d6;--red:#9b1c1c;--redBg:#fde8e8;--tile:#f3eee2}
+:root{--bg:#f4f8fa;--ink:#13293d;--mut:#4f6272;--card:#fff;--line:#d6e1e8;--pri:#0e6f6e;--priInk:#fff;--navy:#0f2a43;--warn:#8a4b00;--warnBg:#fff4de;--red:#9b1c1c;--redBg:#fde8e8;--tile:#e9f1f5}
 *{box-sizing:border-box}
 html{font-size:20px}
 body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif}
 .wrap{max-width:560px;margin:0 auto;padding:12px 14px 40px}
-.notice{background:#1d1b16;color:#fff;font-size:.78rem;padding:8px 12px;text-align:center}
+.notice{background:var(--navy);color:#fff;font-size:.78rem;padding:8px 12px;text-align:center}
 h1{font-size:2rem;line-height:1.15;margin:.6em 0 .2em}h1 small{font-size:1.1rem;color:var(--mut);font-weight:500}
 h2{font-size:1.05rem;margin:0 0 .5em}
 .lead{font-size:1.1rem}
@@ -21,16 +21,31 @@ button:disabled{opacity:.55}
 .top{display:flex;justify-content:space-between;align-items:center;margin:10px 0}
 .hello{font-size:1.4rem;font-weight:700}.muted,.tiny,.why{color:var(--mut)}.tiny{font-size:.78rem}.why{font-size:.72rem;margin-top:4px}
 .card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:14px;margin:12px 0}
-.nudge{background:#e8f4ee;border-color:#b9dccb;font-size:1.1rem;font-weight:600}
+.nudge{background:#e3f1f0;border-color:#a9d3d1;font-size:1.1rem;font-weight:600}
 .nudge.warn{background:var(--warnBg);border-color:#f0cf93}
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .tile{background:var(--tile);border-radius:14px;padding:10px}.tile .k{font-size:.78rem;color:var(--mut);font-weight:600}.tile .v{font-size:1.15rem;font-weight:700;margin:2px 0 6px}
-.bar{height:8px;background:#ddd5c2;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--pri);transition:width .4s}
+.bar{height:8px;background:#cbd9e2;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--pri);transition:width .4s}
 .row{display:flex;gap:8px;margin-top:10px}.row .primary{flex:1}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.chips button{min-height:40px;font-size:.8rem;font-weight:500;padding:4px 10px;border-radius:99px}
-.reply{margin-top:12px;padding:12px;border-radius:12px;background:#e8f4ee;font-size:1.05rem}
+.reply{margin-top:12px;padding:12px;border-radius:12px;background:#e3f1f0;font-size:1.05rem}
 .reply.amber{background:var(--warnBg);color:#4a2800}.reply.red{background:var(--redBg);color:var(--red);font-weight:700;border:2px solid var(--red)}
 .log{list-style:none;padding:0;margin:0}.log li{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-top:1px solid var(--line)}.log li:first-child{border-top:0}
 .log .t{font-size:.72rem;color:var(--mut)}.log button{min-height:44px;min-width:44px;padding:0 10px}
 .actions{display:grid;gap:8px;margin-top:6px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---- Welcome page ---- */
+.welcome{margin:-12px -14px 0}
+.hero{background:linear-gradient(160deg,var(--navy) 0%,#0e5a68 100%);color:#fff;padding:34px 22px 56px;border-radius:0 0 28px 28px}
+.logo{width:56px;height:56px;display:block;box-shadow:0 6px 18px rgba(0,0,0,.25);border-radius:14px}
+.brand{margin-top:14px;font-size:.85rem;letter-spacing:.14em;text-transform:uppercase;opacity:.85;font-weight:600}
+.hero h1{font-size:1.85rem;line-height:1.2;margin:.35em 0 .4em;font-weight:750}
+.hero .lead{margin:0;font-size:1.02rem;opacity:.92}
+.points{list-style:none;margin:-30px 14px 0;padding:0;display:grid;gap:8px}
+.points li{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;box-shadow:0 2px 8px rgba(15,42,67,.06);border-left:5px solid var(--pri)}
+.points b{font-size:1rem;color:var(--navy)}.points span{font-size:.88rem;color:var(--mut)}
+.welcome .form{margin:14px}
+.full{width:100%;margin-top:6px}
+button.primary{box-shadow:0 2px 0 rgba(15,42,67,.2)}
+.hello{color:var(--navy)}
