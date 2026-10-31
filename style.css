@@ -230,3 +230,22 @@ select{width:100%;font:inherit;padding:12px;border:2px solid var(--line);border-
 @media (max-width:380px){.brandname{font-size:.95rem}.prochip{margin-left:5px;padding:2px 7px}.prochip b{display:none}.prochip::before{display:inline}.brandrow{gap:8px}}
 @media (max-width:380px){.brandname{font-size:.86rem}.iconbtn{width:42px;height:42px;min-height:42px}.menu{width:44px;height:44px;min-height:44px}.appbar{padding:0 10px}.mini-logo{width:30px;height:30px}.prochip{padding:2px 6px;margin-left:4px}}
 @media (min-width:381px) and (max-width:440px){.brandname{font-size:.95rem}}
+
+/* ================= Watch, body, emergency, backup ================= */
+.sosbtn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:10px 16px;border-radius:14px;border:2px solid var(--red);background:var(--redBg);color:var(--red);font-weight:700;text-decoration:none;text-align:center}
+.dlist .sosbtn{justify-content:flex-start}
+.sosbtn.alt{border-color:var(--pri);background:#0b2415;color:var(--pri)}
+.hrbox{display:flex;align-items:center;gap:14px;margin:6px 0}
+.hrnum{font-size:3.4rem;font-weight:800;line-height:1;min-width:2.4ch;color:var(--pri);font-variant-numeric:tabular-nums}
+.hrmeta{display:flex;flex-direction:column;min-width:0}.hrmeta b{font-size:1.1rem}
+.zonebar{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:8px 0 2px}
+.zonebar i{height:12px;border-radius:6px;background:#26382d}
+.zonebar i.on{box-shadow:0 0 0 2px #fff}
+.zonebar i[data-z="1"]{background:#2b5a40}.zonebar i[data-z="2"]{background:#2fd46b}.zonebar i[data-z="3"]{background:#f2b84b}.zonebar i[data-z="4"]{background:#ff9b4a}.zonebar i[data-z="5"]{background:#ff5a5a}
+.zonelabels{display:grid;grid-template-columns:repeat(5,1fr);font-size:.8rem;color:var(--mut);text-align:center;margin-bottom:6px}
+.advice{background:var(--warnBg);color:var(--warn);border:2px solid #8a6a1e;border-radius:12px;padding:10px 12px;font-weight:600}
+.advice.stop{background:var(--redBg);color:var(--red);border-color:var(--red)}
+.chart.small{height:130px}
+.wtchart svg{width:100%;height:auto;display:block}
+.wtchart .empty{color:var(--mut);padding:18px 4px;font-size:.95rem}
+.chart .barv.sleep{background:#4cc9f0}.chart .col.today .barv.sleep{background:#7fe0ff}

@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const E = window.HealthEngine, TP = window.HealthTips, W = window.HealthWalk, PL = window.HealthPlans;
+  const E = window.HealthEngine, TP = window.HealthTips, W = window.HealthWalk, PL = window.HealthPlans, WT = window.HealthWatch, F = window.HealthFit;
   const KEY = 'dinchariya.v1'; // storage key kept from the first version so saved notes survive the rename
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
@@ -47,7 +47,7 @@
     $$('.view').forEach((el) => { el.hidden = el.dataset.view !== v; });
     $$('#tabbar button').forEach((b) => { b.classList.toggle('on', b.dataset.go === v); b.setAttribute('aria-current', b.dataset.go === v ? 'page' : 'false'); });
     closeDrawer(true);
-    if (v === 'me') fillProfileForm();
+    if (v === 'me') { fillProfileForm(); fillEmergency(); }
     render();
     const target = scrollId && document.getElementById(scrollId);
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); else window.scrollTo(0, 0);
@@ -140,6 +140,7 @@
     $$('#metricchips button').forEach((b) => b.classList.toggle('on', b.dataset.m === metric));
 
     renderRewardTile();
+    renderSnapshot();
     const tip = TP.pickDaily(todayKey(), sum, g)[0];
     $('#teaser').innerHTML = '<span class="kick">Today\'s health digest</span><b></b><span></span>';
     $('#teaser').querySelector('b').textContent = tip.title; $('#teaser span:last-child').textContent = tip.body.length > 110 ? tip.body.slice(0, 108).replace(/\s+\S*$/, '') + '… Read more' : tip.body;
@@ -197,6 +198,10 @@
       if (e.walkSkipped) bits.push('🚶 ✗');
       if (e.bp) bits.push(`BP ${e.bp.s}/${e.bp.d}`);
       if (e.sugar != null) bits.push(`sugar ${e.sugar}`);
+      if (e.quick === 'workout') { const a = F.ACTIVITIES.find((x) => x.id === e.activity); bits.push(`🏋 ${a ? a.label : 'Workout'} ${e.activeMin} min · ~${e.burn || 0} kcal`); }
+      if (e.quick === 'sleep') bits.push(`😴 ${e.sleepH} h sleep`);
+      if (e.quick === 'weight') bits.push(`⚖ ${e.kg} kg`);
+      if (e.hr) bits.push(`♥ avg ${e.hr.avg} · max ${e.hr.max}`);
       if (e.safety && e.safety.level !== 'none') bits.push('⚠ tell your doctor');
       d.innerHTML = '<div class="t"></div><div class="b"></div>';
       d.querySelector('.t').textContent = new Date(e.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -276,7 +281,9 @@
     if (view === 'track') renderTrack(g, sum);
     if (view === 'tips') renderTips(g, sum);
     if (view === 'me') renderMe(g, sum);
-    if (view === 'walk') renderWalk();
+    if (view === 'track') renderBody();
+    if (view === 'walk') { renderWalk(); renderHr(); }
+    if (view === 'me') renderEmergency();
     if (view === 'rewards') renderRewards();
     if (view === 'plans') renderPlans();
     renderPro(); updateChatMeta();
@@ -404,6 +411,13 @@
       if (i % 3 !== 1) meals.push(mk('curd', 1, 'katori', 60, 100, 3, 5, 'dinner'), mk('khichdi', 1, 'katori', 150, 220, 5, 8, 'dinner'));
       st.entries.push({ id: 's' + i, ts: d.getTime(), sample: true, text: 'sample', meals, water: waters[i], walkMin: w, steps: stepsArr[i], walkSkipped: w === 0, safety: { level: 'none', reasons: [] } });
     });
+    const sleeps = [7.2, 6.5, 7.8, 6.8, 5.9, 7.1], kgs = [71.0, 70.9, 70.8, 70.6, 70.6, 70.4];
+    walks.forEach((w, i) => {
+      const d = new Date(); d.setDate(d.getDate() - (6 - i)); d.setHours(7, 30, 0, 0);
+      st.entries.push({ id: 'ss' + i, ts: d.getTime(), sample: true, text: 'sample', quick: 'sleep', sleepH: sleeps[i], meals: [], water: 0, walkMin: 0, steps: 0, safety: { level: 'none', reasons: [] } });
+      st.entries.push({ id: 'sw' + i, ts: d.getTime() + 60000, sample: true, text: 'sample', quick: 'weight', kg: kgs[i], meals: [], water: 0, walkMin: 0, steps: 0, safety: { level: 'none', reasons: [] } });
+      if (i % 2 === 1) st.entries.push({ id: 'sk' + i, ts: d.getTime() + 120000, sample: true, text: 'sample', quick: 'workout', activity: 'yoga', activeMin: 30, burn: 88, meals: [], water: 0, walkMin: 0, steps: 0, safety: { level: 'none', reasons: [] } });
+    });
     save(); render(); toast('Sample week loaded');
   }
 
@@ -528,7 +542,7 @@
     if (tracking) return;
     ensureMap(); if (map) map.invalidateSize();
     if (source === 'gps' && !navigator.geolocation) { $('#walk-msg').textContent = 'This browser cannot share your location. Try the demo walk instead.'; return; }
-    tracking = { points: [], startTs: Date.now(), source, timer: null, watch: null, demo: null, wake: null };
+    tracking = { hrIdx: hr.samples.length, points: [], startTs: Date.now(), source, timer: null, watch: null, demo: null, wake: null };
     drawRoute([], false); setReadout(0, 0, 0); walkUI(true); $('#walk-msg').textContent = source === 'gps' ? 'Looking for your location…' : 'Demo walk: a made-up route is being drawn.';
     tracking.timer = setInterval(updateLive, 1000);
     if (source === 'gps') {
@@ -553,7 +567,8 @@
     const s = W.stats(pts, start, end, E.STEP_KM);
     if (W.lengthM(pts) < 30) { $('#walk-msg').textContent = 'That walk was very short (under 30 m), so I did not save it.'; return; }
     const route = W.downsample(pts, 150).map((p) => ({ lat: +p.lat.toFixed(5), lng: +p.lng.toFixed(5) }));
-    withRewardCheck(() => pushEntry({ quick: 'gps', demo: t.source === 'demo', route, km: s.km, steps: s.steps, walkMin: Math.max(1, Math.round(s.minutes)) }));
+    const hs = WT.summarize(hr.samples.slice(t.hrIdx || 0), WT.maxHr(st.profile && st.profile.age));
+    withRewardCheck(() => pushEntry({ quick: 'gps', demo: t.source === 'demo', route, km: s.km, steps: s.steps, walkMin: Math.max(1, Math.round(s.minutes)), hr: hs && hs.n >= 5 ? { avg: hs.avg, max: hs.max, min: hs.min, n: hs.n } : undefined }));
     drawRoute(pts, true); setReadout(s.km, (end - start) / 1000, s.steps);
     $('#walk-msg').textContent = `Saved: ${s.km.toFixed(2)} km, ${Math.max(1, Math.round(s.minutes))} min, about ${fmt(s.steps)} steps.` + (t.source === 'demo' ? ' (Demo walk: made-up steps were added.)' : '');
     render();
@@ -574,7 +589,7 @@
       const li = document.createElement('li'), d = document.createElement('div');
       d.innerHTML = '<div class="t"></div><div class="b"></div>';
       d.querySelector('.t').textContent = new Date(e.ts).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-      d.querySelector('.b').textContent = `${(e.km || 0).toFixed(2)} km · ${e.walkMin} min · ${fmt(e.steps)} steps${e.demo ? ' · demo' : ''}`;
+      d.querySelector('.b').textContent = `${(e.km || 0).toFixed(2)} km · ${e.walkMin} min · ${fmt(e.steps)} steps${e.hr ? ` · ♥ avg ${e.hr.avg}` : ''}${e.demo ? ' · demo' : ''}`;
       const box = document.createElement('div'); box.className = 'rowbtns';
       const m = document.createElement('button'); m.type = 'button'; m.textContent = '🗺'; m.setAttribute('aria-label', 'Show this walk on the map'); m.onclick = () => showWalk(e);
       const x = document.createElement('button'); x.type = 'button'; x.textContent = '🗑'; x.setAttribute('aria-label', 'Delete this walk');
@@ -665,6 +680,200 @@
   $('#share').onclick = share; $('#d-share').onclick = share;
   $('#reset').onclick = reset; $('#d-reset').onclick = reset;
   $('#sample').onclick = sample; $('#d-sample').onclick = sample;
+
+
+  // ================= body: workouts, sleep, weight =================
+  const weekKeys = () => Array.from({ length: 7 }, (_, i) => dayKeyOffset(-i));
+  const activeMinOn = (k) => entriesOn(k).reduce((a, e) => a + (e.walkMin || 0) + (e.activeMin || 0), 0);
+  const weekActive = () => weekKeys().reduce((a, k) => a + activeMinOn(k), 0);
+  function latestWeight() {
+    const w = st.entries.filter((e) => e.quick === 'weight' && F.validKg(e.kg)).sort((a, b) => b.ts - a.ts)[0];
+    return w ? w.kg : (st.profile && F.validKg(st.profile.weightKg) ? st.profile.weightKg : null);
+  }
+  function sleepLogs() { // oldest -> newest, one value per day (0 = not logged)
+    return weekKeys().slice().reverse().map((k) => { const e = entriesOn(k).filter((x) => x.quick === 'sleep').pop(); return { k, h: e ? e.sleepH : 0 }; });
+  }
+  function renderSnapshot() {
+    const wa = weekActive(), sl = F.avg(sleepLogs().filter((x) => x.h > 0).map((x) => x.h)), wt = latestWeight();
+    $('#sn-active').textContent = fmt(wa); $('#sn-sleep').textContent = sl == null ? '-' : sl.toFixed(1); $('#sn-weight').textContent = wt == null ? '-' : wt;
+    $('#sn-bar').style.width = Math.min(100, (wa / F.WEEKLY_ACTIVE_GOAL) * 100) + '%';
+    $('#sn-note').textContent = wa >= F.WEEKLY_ACTIVE_GOAL ? 'You have reached the weekly 150-minute activity target. Well done!' : `${F.WEEKLY_ACTIVE_GOAL - wa} more active minutes to reach the weekly 150-minute target (a WHO suggestion for adults). Walking minutes are estimated from your steps.`;
+  }
+  function renderBody() {
+    const wa = weekActive();
+    $('#wk-week').textContent = `${fmt(wa)}/${F.WEEKLY_ACTIVE_GOAL}`;
+    $('#b-active').style.width = Math.min(100, (wa / F.WEEKLY_ACTIVE_GOAL) * 100) + '%';
+    $('#wk-note').textContent = wa >= F.WEEKLY_ACTIVE_GOAL ? 'Weekly target reached. Keep it comfortable.' : `${F.WEEKLY_ACTIVE_GOAL - wa} min to the weekly 150-minute target. Walks, yoga and gardening all count.`;
+    // sleep chart
+    const logs = sleepLogs(), box = $('#sleep-chart'), AREA = 80; box.innerHTML = '';
+    logs.forEach((x, i) => {
+      const col = document.createElement('div'); col.className = 'col' + (i === logs.length - 1 ? ' today' : '');
+      col.innerHTML = '<div class="val"></div><div class="barv sleep"></div><div class="day"></div>';
+      col.querySelector('.val').textContent = x.h ? x.h : '';
+      col.querySelector('.barv').style.height = x.h ? Math.max(3, (x.h / 10) * AREA) + 'px' : '3px';
+      col.querySelector('.day').textContent = i === logs.length - 1 ? 'Today' : new Date(x.k.replace(/-/g, '/')).toLocaleDateString('en-IN', { weekday: 'short' }).slice(0, 3);
+      box.appendChild(col);
+    });
+    const sl = F.avg(logs.filter((x) => x.h > 0).map((x) => x.h)); $('#sl-avg').textContent = sl == null ? '-' : sl.toFixed(1);
+    // weight chart: one point per day (last reading of the day), newest 30
+    const byDay = {}; st.entries.filter((e) => e.quick === 'weight' && F.validKg(e.kg)).sort((a, b) => a.ts - b.ts).forEach((e) => { byDay[E.dayKey(e.ts)] = e; });
+    const pts = Object.values(byDay).slice(-30), ws = F.weightStats(pts.map((p) => ({ ts: p.ts, kg: p.kg })));
+    $('#wt-now').textContent = ws ? ws.latest : (latestWeight() || '-');
+    $('#wt-sub').textContent = ws && ws.count > 1 ? `kg · ${ws.change > 0 ? '+' : ''}${ws.change.toFixed(1)} since ${new Date(pts[0].ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : 'kg';
+    const wc = $('#wt-chart');
+    if (pts.length < 2) wc.innerHTML = '<div class="empty">Save your weight on two or more days to see the trend.</div>';
+    else {
+      const W0 = 300, H0 = 110, pad = 14, t0 = pts[0].ts, t1 = pts[pts.length - 1].ts, ks = pts.map((p) => p.kg), lo = Math.min(...ks) - 0.5, hi = Math.max(...ks) + 0.5;
+      const X = (t) => pad + ((t - t0) / Math.max(1, t1 - t0)) * (W0 - 2 * pad), Y = (k) => H0 - pad - ((k - lo) / Math.max(0.1, hi - lo)) * (H0 - 2 * pad);
+      const path = pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.ts).toFixed(1)} ${Y(p.kg).toFixed(1)}`).join(' ');
+      const dots = pts.map((p) => `<circle cx="${X(p.ts).toFixed(1)}" cy="${Y(p.kg).toFixed(1)}" r="3.5" fill="#2fd46b"/>`).join('');
+      wc.innerHTML = `<svg viewBox="0 0 ${W0} ${H0}" aria-hidden="true"><path d="${path}" fill="none" stroke="#2fd46b" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}<text x="${pad}" y="12" fill="#a3bbab" font-size="11">${hi.toFixed(1)}</text><text x="${pad}" y="${H0 - 2}" fill="#a3bbab" font-size="11">${lo.toFixed(1)}</text></svg>`;
+    }
+    $('#wt-chart').setAttribute('aria-label', 'Weight over time: ' + pts.map((p) => p.kg + ' kg').join(', '));
+  }
+  function addWorkout() {
+    const m = +$('#wk-min').value, a = F.ACTIVITIES.find((x) => x.id === $('#wk-act').value), msg = $('#wk-msg');
+    if (!a || !F.validMinutes(m)) { msg.textContent = 'Please enter whole minutes between 1 and 300.'; return; }
+    const kg = latestWeight(), burn = F.burnKcal(a.met, m, kg);
+    pushEntry({ quick: 'workout', activity: a.id, activeMin: m, burn });
+    $('#wk-min').value = ''; msg.textContent = `Added ${a.label}, ${m} min: about ${burn} kcal burned (rough estimate${F.validKg(kg) ? '' : ', assuming 65 kg. Add your weight for a better figure'}).`;
+    toast('Workout added'); render();
+  }
+  function addSleep() {
+    const h = F.sleepHours($('#sl-bed').value, $('#sl-wake').value), msg = $('#sl-msg');
+    if (h == null) { msg.textContent = 'Please check the times: sleep should be between 1 and 16 hours.'; return; }
+    st.entries = st.entries.filter((e) => !(e.quick === 'sleep' && E.dayKey(e.ts) === todayKey())); // one night per day: replace
+    pushEntry({ quick: 'sleep', sleepH: h, bed: $('#sl-bed').value, wake: $('#sl-wake').value });
+    msg.textContent = `Logged ${h} hours of sleep.`; toast('Sleep logged'); render();
+  }
+  function addWeight() {
+    const kg = Math.round(+$('#wt-in').value * 10) / 10, msg = $('#wt-msg');
+    if (!F.validKg(kg)) { msg.textContent = 'Please enter a weight between 30 and 250 kg.'; return; }
+    pushEntry({ quick: 'weight', kg });
+    if (st.profile) st.profile.weightKg = kg; // protein and calorie estimates follow your latest weight
+    save(); $('#wt-in').value = ''; msg.textContent = `Saved ${kg} kg. Your protein and calorie estimates now use this weight.`; toast('Weight saved'); render();
+  }
+
+  // ================= watch & heart rate (standard Bluetooth Heart Rate profile) =================
+  let hr = { dev: null, char: null, samples: [], last: null, demo: null, name: '', retries: 0, adviceZ: -1 };
+  const ZCOLORS = ['#a3bbab', '#2b5a40', '#2fd46b', '#f2b84b', '#ff9b4a', '#ff5a5a'];
+  function onBpm(p) {
+    if (!p || !p.valid) return;
+    if (p.contact === false) { $('#hr-msg').textContent = 'The sensor is not touching your skin. Fasten the watch or strap snugly.'; return; }
+    hr.last = { bpm: p.bpm, t: Date.now() }; hr.samples.push({ t: Date.now(), bpm: p.bpm }); if (hr.samples.length > 7200) hr.samples.splice(0, hr.samples.length - 7200);
+    if (view === 'walk') renderHr();
+  }
+  function renderHr() {
+    const connected = !!(hr.dev && hr.dev.gatt && hr.dev.gatt.connected) || !!hr.demo, fresh = hr.last && Date.now() - hr.last.t < 10000;
+    const max = WT.maxHr(st.profile && st.profile.age), z = fresh ? WT.zoneOf(hr.last.bpm, max) : null;
+    $('#hr-bpm').textContent = fresh ? hr.last.bpm : '--';
+    $('#hr-bpm').style.color = z ? ZCOLORS[z.z] : '';
+    $('#hr-zone').textContent = !connected ? 'Not connected' : z ? `${z.label} zone · ${z.pct}% of max` : 'Waiting for a reading…';
+    $('#hr-dev').textContent = connected ? (hr.name || 'Connected') : '';
+    $$('#zonebar i').forEach((i) => i.classList.toggle('on', !!z && +i.dataset.z === z.z));
+    const adv = z ? WT.advice(z) : null, a = $('#hr-advice');
+    a.hidden = !adv; if (adv) { a.textContent = adv; a.classList.toggle('stop', z.z >= 5); }
+    $('#hr-connect').hidden = connected; $('#hr-disconnect').hidden = !connected; $('#hr-demo').disabled = connected;
+    const hasAge = st.profile && st.profile.age;
+    $('#hr-compat').textContent = (navigator.bluetooth ? 'Works with chest straps and watches that share a standard Bluetooth heart rate (for example a watch\'s "broadcast heart rate" mode). Apple Watch and Fitbit do not share heart rate with websites. ' : 'This browser cannot connect to Bluetooth devices. Try Chrome on an Android phone. You can still try the demo. ') + `Zones use an estimated maximum of ${max} bpm${hasAge ? '' : ' (add your age in Me for a closer estimate)'}. Not medical advice.`;
+    $('#hr-connect').disabled = !navigator.bluetooth;
+  }
+  async function attachHr(dev) {
+    const server = await dev.gatt.connect(), svc = await server.getPrimaryService('heart_rate'), ch = await svc.getCharacteristic('heart_rate_measurement');
+    await ch.startNotifications(); hr.char = ch; hr.retries = 0;
+    ch.addEventListener('characteristicvaluechanged', (ev) => onBpm(WT.parseHeartRate(ev.target.value)));
+    $('#hr-msg').textContent = 'Connected. Heart rate appears in a few seconds.'; renderHr();
+  }
+  async function connectWatch() {
+    if (!navigator.bluetooth) { $('#hr-msg').textContent = 'This browser cannot connect to Bluetooth devices.'; return; }
+    $('#hr-msg').textContent = 'Choose your watch or strap from the list…';
+    try {
+      const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+      hr.dev = dev; hr.name = dev.name || 'Heart rate device';
+      dev.addEventListener('gattserverdisconnected', onHrDrop);
+      await attachHr(dev);
+    } catch (e) {
+      hr.dev = null;
+      $('#hr-msg').textContent = e && e.name === 'NotFoundError' ? 'No device was chosen. Turn on your watch\'s heart-rate sharing and try again.'
+        : e && e.name === 'SecurityError' ? 'Bluetooth needs a secure (https) page and your permission.' : 'Could not connect. Make sure the device is on, close to your phone, and sharing heart rate.';
+      renderHr();
+    }
+  }
+  async function onHrDrop() {
+    if (!hr.dev) return;
+    if (hr.retries < 2) { hr.retries++; $('#hr-msg').textContent = 'Connection lost. Trying again…'; await new Promise((r) => setTimeout(r, 2000)); try { await attachHr(hr.dev); return; } catch (e) { /* fall through */ } }
+    $('#hr-msg').textContent = 'The device disconnected.'; hr.dev = null; renderHr();
+  }
+  function disconnectHr() {
+    if (hr.demo) { clearInterval(hr.demo); hr.demo = null; }
+    const d = hr.dev; hr.dev = null; hr.last = null; try { if (d && d.gatt && d.gatt.connected) d.gatt.disconnect(); } catch (e) {}
+    $('#hr-msg').textContent = 'Disconnected.'; renderHr();
+  }
+  function demoHr() {
+    if (hr.demo) return; let t = 0; hr.name = 'Demo (made-up numbers)'; $('#hr-msg').textContent = 'Demo heart rate: made-up numbers for a gentle walk.';
+    hr.demo = setInterval(() => { t++; onBpm({ bpm: WT.demoBpm(t), valid: true, contact: true }); if (view !== 'walk') renderHr(); }, 1000); onBpm({ bpm: WT.demoBpm(0), valid: true, contact: true }); renderHr();
+  }
+
+  // ================= emergency contact =================
+  function fillEmergency() { const e = (st.profile && st.profile.emergency) || {}; $('#em-name').value = e.name || ''; $('#em-phone').value = e.phone || ''; $('#em-msg').textContent = ''; }
+  function renderEmergency() {
+    const e = st.profile && st.profile.emergency, a = $('#em-call');
+    if (e && F.isPhone(e.phone)) { a.hidden = false; a.href = F.telHref(e.phone); a.textContent = `Call ${e.name || 'my contact'}`; } else { a.hidden = true; a.removeAttribute('href'); }
+  }
+  function saveEmergency() {
+    const name = $('#em-name').value.trim().slice(0, 30), phone = $('#em-phone').value.trim(), msg = $('#em-msg');
+    if (!name && !phone) { delete st.profile.emergency; save(); renderEmergency(); msg.textContent = 'Contact removed.'; return; }
+    if (!F.isPhone(phone)) { msg.textContent = 'Please enter a valid phone number, for example +91 98765 43210.'; return; }
+    st.profile.emergency = { name, phone }; save(); renderEmergency(); msg.textContent = 'Saved.'; toast('Emergency contact saved');
+  }
+
+  // ================= backup, restore, CSV =================
+  function download(name, mime, text) {
+    const url = URL.createObjectURL(new Blob([text], { type: mime })), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  function backupDownload() {
+    const payload = { app: 'my-fitness-buddy', version: 1, exportedTs: Date.now(), data: { profile: st.profile, entries: st.entries, chat: st.chat, plan: st.plan, redeemed: st.redeemed, ai: st.ai } };
+    download(`my-fitness-buddy-backup-${todayKey()}.json`, 'application/json', JSON.stringify(payload));
+    $('#bk-msg').textContent = 'Backup downloaded. Keep the file private.';
+  }
+  function csvDownload() {
+    const days = {}; st.entries.forEach((e) => { const k = E.dayKey(e.ts); (days[k] = days[k] || []).push(e); });
+    const rows = Object.keys(days).sort().map((k) => {
+      const s = E.summarize(days[k]), w = days[k].filter((e) => e.quick === 'weight').pop(), sl = days[k].filter((e) => e.quick === 'sleep').pop();
+      return { date: k, steps: s.steps, km: s.km, water_glasses: s.water, kcal_low: s.kcalLo, kcal_high: s.kcalHi, protein_low_g: s.protLo, protein_high_g: s.protHi, active_min: days[k].reduce((a, e) => a + (e.walkMin || 0) + (e.activeMin || 0), 0), sleep_h: sl ? sl.sleepH : '', weight_kg: w ? w.kg : '' };
+    });
+    if (!rows.length) { $('#bk-msg').textContent = 'Nothing to export yet.'; return; }
+    download(`my-fitness-buddy-summary-${todayKey()}.csv`, 'text/csv', F.toCSV(rows));
+    $('#bk-msg').textContent = 'Summary downloaded. Calories and protein are rough ranges (low and high).';
+  }
+  function backupRestore(file) {
+    const msg = $('#bk-msg');
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { msg.textContent = 'That file is too big to be a backup (over 8 MB).'; return; }
+    const rd = new FileReader();
+    rd.onerror = () => { msg.textContent = 'That file could not be read.'; };
+    rd.onload = () => {
+      const r = F.sanitizeBackup(String(rd.result), PL.PLANS.map((p) => p.id));
+      if (!r.ok) { msg.textContent = r.error; return; }
+      if (!confirm(`Replace everything on this phone with this backup (${r.state.entries.length} notes)? This cannot be undone.`)) { msg.textContent = 'Restore cancelled. Nothing was changed.'; return; }
+      st = r.state; save(); render(); fillProfileForm(); fillEmergency();
+      msg.textContent = `Restored ${r.state.entries.length} notes.` + (r.dropped ? ` ${r.dropped} unreadable notes were skipped.` : ''); toast('Backup restored');
+    };
+    rd.readAsText(file);
+  }
+
+  // ---- wiring for the new features ----
+  F.ACTIVITIES.forEach((a) => { const o = document.createElement('option'); o.value = a.id; o.textContent = a.label; $('#wk-act').appendChild(o); });
+  [15, 30, 45, 60].forEach((n) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = n + ' min'; b.onclick = () => { $('#wk-min').value = n; }; $('#wk-chips').appendChild(b); });
+  $('#wk-add').onclick = addWorkout; $('#sl-add').onclick = addSleep; $('#wt-add').onclick = addWeight;
+  $('#wt-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') addWeight(); });
+  $('#hr-connect').onclick = connectWatch; $('#hr-disconnect').onclick = disconnectHr; $('#hr-demo').onclick = demoHr;
+  $('#em-save').onclick = saveEmergency;
+  $('#bk-download').onclick = backupDownload; $('#bk-csv').onclick = csvDownload;
+  $('#bk-restore').onclick = () => $('#bk-file').click();
+  $('#bk-file').onchange = (ev) => { backupRestore(ev.target.files[0]); ev.target.value = ''; };
+  setInterval(() => { if (view === 'walk') renderHr(); }, 5000); // greys out the number if readings stop
 
   // ---------------- refresh ----------------
   // Re-reads the clock, re-checks whether live AI is reachable, and redraws every screen.

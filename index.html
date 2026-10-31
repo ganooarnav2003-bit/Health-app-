@@ -27,6 +27,7 @@
 <nav id="drawer" class="drawer" aria-label="Main menu" inert>
   <div class="dhead"><div><div class="dname" id="d-name">Menu</div><div class="muted" id="d-sub"></div></div><button id="menu-close" class="mini" type="button" aria-label="Close menu">✕</button></div>
   <ul class="dlist">
+    <li><a class="sosbtn" href="tel:112">🚨 Emergency: call 112</a></li>
     <li><button data-go="home">📊 Dashboard</button></li>
     <li><button id="d-refresh" type="button">🔄 Refresh</button></li>
     <li><button data-go="walk">🗺 Walk map</button></li>
@@ -37,7 +38,13 @@
     <li><button data-go="track" data-scroll="kcalcard">🔥 Calories</button></li>
     <li><button data-go="track" data-scroll="watercard">💧 Water</button></li>
     <li><button data-go="track" data-scroll="walkcard">🚶 Steps &amp; distance</button></li>
+    <li><button data-go="walk" data-scroll="hrcard">⌚ Watch &amp; heart rate</button></li>
+    <li><button data-go="track" data-scroll="workoutcard">🏋 Workouts</button></li>
+    <li><button data-go="track" data-scroll="sleepcard">😴 Sleep</button></li>
+    <li><button data-go="track" data-scroll="weightcard">⚖ Weight</button></li>
     <li><button data-go="me" data-scroll="proteincard">💪 Protein &amp; personal data</button></li>
+    <li><button data-go="me" data-scroll="sosCard">🚨 Emergency contact</button></li>
+    <li><button data-go="me" data-scroll="backupcard">💾 Backup &amp; restore</button></li>
     <li><button data-go="chat">🤖 AI assistant</button></li>
     <li><button data-go="tips">📰 Daily health digest</button></li>
     <li class="sep"></li>
@@ -96,6 +103,17 @@
         <button id="q-steps" type="button"><span>🚶</span>+1,000 steps</button>
         <button id="q-log" type="button"><span>🍽</span>Log food</button>
         <button id="q-ask" type="button"><span>🤖</span>Ask Guide</button>
+      </section>
+
+      <section class="card" id="snapcard" aria-labelledby="h-snap">
+        <div class="thead"><h2 id="h-snap">Body snapshot</h2><button class="mini ghost" data-go="track" data-scroll="workoutcard" type="button">Add</button></div>
+        <div class="stats3">
+          <div><span class="v" id="sn-active">0</span><span class="k">active min · 7 days</span></div>
+          <div><span class="v" id="sn-sleep">-</span><span class="k">avg sleep (h)</span></div>
+          <div><span class="v" id="sn-weight">-</span><span class="k">weight (kg)</span></div>
+        </div>
+        <div class="bar"><i id="sn-bar"></i></div>
+        <p class="why" id="sn-note"></p>
       </section>
 
       <button class="card rewardtile" id="rewardcard" data-go="rewards" type="button"></button>
@@ -170,6 +188,40 @@
         <p class="why">Distance is estimated from steps (about 0.7 m per step), so treat it as approximate.</p>
       </section>
 
+      <section class="card" id="workoutcard" aria-labelledby="h-wk">
+        <div class="thead"><h2 id="h-wk">🏋 Workouts</h2><div class="stat"><span class="v" id="wk-week"></span><span class="k">active min this week</span></div></div>
+        <div class="bar"><i id="b-active"></i></div>
+        <p class="why" id="wk-note"></p>
+        <div class="grid2">
+          <div><label for="wk-act">Activity</label><select id="wk-act"></select></div>
+          <div><label for="wk-min">Minutes</label><input id="wk-min" type="number" inputmode="numeric" min="1" max="300" placeholder="e.g. 30"></div>
+        </div>
+        <div class="chips" id="wk-chips"></div>
+        <button id="wk-add" class="primary big full" type="button">Add workout</button>
+        <p class="why" id="wk-msg" aria-live="polite"></p>
+        <p class="why">Calories burned are rough estimates from the activity type, your weight and the time. Do not add walks you already tracked on the map.</p>
+      </section>
+
+      <section class="card" id="sleepcard" aria-labelledby="h-sl">
+        <div class="thead"><h2 id="h-sl">😴 Sleep</h2><div class="stat"><span class="v" id="sl-avg">-</span><span class="k">avg hours (7 nights)</span></div></div>
+        <div class="chart small" id="sleep-chart" role="img" aria-label="Hours slept in the last seven days"></div>
+        <div class="grid2">
+          <div><label for="sl-bed">Went to bed</label><input id="sl-bed" type="time" value="22:30"></div>
+          <div><label for="sl-wake">Woke up</label><input id="sl-wake" type="time" value="06:30"></div>
+        </div>
+        <button id="sl-add" class="primary big full" type="button">Log last night</button>
+        <p class="why" id="sl-msg" aria-live="polite"></p>
+        <p class="why">Many older adults feel best with about 7 to 8 hours. If poor sleep goes on, please talk to your doctor.</p>
+      </section>
+
+      <section class="card" id="weightcard" aria-labelledby="h-wt">
+        <div class="thead"><h2 id="h-wt">⚖ Weight</h2><div class="stat"><span class="v" id="wt-now">-</span><span class="k" id="wt-sub">kg</span></div></div>
+        <div id="wt-chart" class="wtchart" role="img" aria-label="Weight over time"></div>
+        <div class="row"><input id="wt-in" type="number" inputmode="decimal" step="0.1" min="30" max="250" placeholder="Today's weight (kg)" aria-label="Today's weight in kilograms"><button id="wt-add" class="primary big" type="button">Save</button></div>
+        <p class="why" id="wt-msg" aria-live="polite"></p>
+        <p class="why">Saving a weight also updates your protein and calorie estimates. Weight naturally moves up and down day to day: look at the trend, not one reading.</p>
+      </section>
+
       <section class="card">
         <h2>Today's notes</h2>
         <ul id="log" class="log"></ul>
@@ -197,6 +249,24 @@
         <p class="why" id="walk-msg" aria-live="polite"></p>
         <p class="why">Keep this screen open while you walk, as phones can pause GPS when the screen is off. Your location and routes stay on this phone only. Steps are estimated from distance, so they are approximate.</p>
       </section>
+      <section class="card" id="hrcard" aria-labelledby="h-hr">
+        <h2 id="h-hr">⌚ Watch &amp; heart rate</h2>
+        <div class="hrbox">
+          <div class="hrnum" id="hr-bpm" aria-live="off">--</div>
+          <div class="hrmeta"><b id="hr-zone">Not connected</b><span class="why" id="hr-dev"></span></div>
+        </div>
+        <div class="zonebar" id="zonebar" aria-hidden="true"><i data-z="0"></i><i data-z="1"></i><i data-z="2"></i><i data-z="3"></i><i data-z="4"></i><i data-z="5"></i></div>
+        <div class="zonelabels" aria-hidden="true"><span>Rest</span><span>Light</span><span>Moderate</span><span>Hard</span><span>Max</span></div>
+        <p class="advice" id="hr-advice" role="alert" hidden></p>
+        <div class="row">
+          <button id="hr-connect" class="primary big" type="button">Connect watch or strap</button>
+          <button id="hr-disconnect" class="big" type="button" hidden>Disconnect</button>
+        </div>
+        <div class="row"><button id="hr-demo" class="ghost" type="button">Try demo heart rate (made-up)</button></div>
+        <p class="why" id="hr-msg" aria-live="polite"></p>
+        <p class="why" id="hr-compat"></p>
+      </section>
+
       <section class="card">
         <h2>Your walks</h2>
         <ul id="walklist" class="log"></ul>
@@ -289,6 +359,34 @@
         <div id="prot-body"></div>
       </section>
 
+      <section class="card" id="sosCard" aria-labelledby="h-sos">
+        <h2 id="h-sos">🚨 Emergency contact</h2>
+        <p class="muted">One tap to call for help. Stored on this phone only.</p>
+        <div class="actions">
+          <a class="sosbtn big" href="tel:112">Call 112 (emergency)</a>
+          <a class="sosbtn big alt" id="em-call" href="#" hidden></a>
+        </div>
+        <div class="grid2">
+          <div><label for="em-name">Contact name</label><input id="em-name" maxlength="30" autocomplete="off"></div>
+          <div><label for="em-phone">Phone number</label><input id="em-phone" type="tel" inputmode="tel" maxlength="20" autocomplete="off" placeholder="+91 98765 43210"></div>
+        </div>
+        <div class="row"><button id="em-save" class="primary big" type="button">Save contact</button></div>
+        <p class="why" id="em-msg" aria-live="polite"></p>
+      </section>
+
+      <section class="card" id="backupcard" aria-labelledby="h-bk">
+        <h2 id="h-bk">💾 Backup &amp; restore</h2>
+        <p class="muted">Your notes live only on this phone. Save a copy so you never lose them, or to move to a new phone.</p>
+        <div class="actions">
+          <button id="bk-download" type="button">Download backup (.json)</button>
+          <button id="bk-restore" type="button">Restore from a backup</button>
+          <button id="bk-csv" type="button">Export daily summary (.csv) for my doctor</button>
+        </div>
+        <input type="file" id="bk-file" accept="application/json,.json" hidden>
+        <p class="why" id="bk-msg" aria-live="polite"></p>
+        <p class="why">A backup contains your health notes and walk routes. Keep the file private. Restoring replaces what is on this phone.</p>
+      </section>
+
       <section class="card">
         <h2>Your data</h2>
         <div class="actions">
@@ -336,6 +434,8 @@
 <script src="tips.js"></script>
 <script src="walk.js"></script>
 <script src="plans.js"></script>
+<script src="watch.js"></script>
+<script src="fit.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
